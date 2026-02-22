@@ -123,7 +123,7 @@ function Navbar() {
                     left: 0,
                     right: 0,
                     zIndex: 1000,
-                    padding: scrolled ? "18px 48px" : "28px 48px",
+                    padding: scrolled ? "16px 48px" : "24px 48px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -237,19 +237,20 @@ function Navbar() {
                         padding: 8,
                         zIndex: 1010,
                         flexDirection: "column",
-                        gap: 5,
+                        gap: 6,
                         width: 32,
-                        alignItems: "stretch",
+                        alignItems: "flex-end",
                     }}
                 >
                     <span
                         style={{
                             display: "block",
                             height: 2,
+                            width: "100%",
                             background: menuOpen ? "#FF3B30" : "#fff",
                             borderRadius: 1,
-                            transition: "all 0.3s ease",
-                            transform: menuOpen ? "rotate(45deg) translateY(5px)" : "none",
+                            transition: "all 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                            transform: menuOpen ? "rotate(45deg) translateY(6px) translateX(5px)" : "none",
                             transformOrigin: "center",
                         }}
                     />
@@ -257,19 +258,22 @@ function Navbar() {
                         style={{
                             display: "block",
                             height: 2,
-                            background: menuOpen ? "transparent" : "#fff",
+                            width: menuOpen ? "0%" : "70%",
+                            background: "#fff",
                             borderRadius: 1,
-                            transition: "all 0.3s ease",
+                            transition: "all 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                            opacity: menuOpen ? 0 : 1,
                         }}
                     />
                     <span
                         style={{
                             display: "block",
                             height: 2,
+                            width: "100%",
                             background: menuOpen ? "#FF3B30" : "#fff",
                             borderRadius: 1,
-                            transition: "all 0.3s ease",
-                            transform: menuOpen ? "rotate(-45deg) translateY(-5px)" : "none",
+                            transition: "all 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                            transform: menuOpen ? "rotate(-45deg) translateY(-6px) translateX(5px)" : "none",
                             transformOrigin: "center",
                         }}
                     />
@@ -283,84 +287,119 @@ function Navbar() {
                     position: "fixed",
                     inset: 0,
                     zIndex: 999,
-                    background: "rgba(0,0,0,0.97)",
+                    background: "#000",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 32,
+                    gap: 24,
                     opacity: menuOpen ? 1 : 0,
+                    visibility: menuOpen ? "visible" : "hidden",
                     pointerEvents: menuOpen ? "auto" : "none",
-                    transition: "opacity 0.4s ease",
+                    transition: "all 0.5s cubic-bezier(0.19, 1, 0.22, 1)",
                     backdropFilter: "blur(20px)",
                 }}
             >
-                {NAV_LINKS.map((link) => (
-                    <a
-                        key={link.href}
-                        href={link.href}
+                {/* Mobile Menu Links */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+                    {NAV_LINKS.map((link, i) => (
+                        <a
+                            key={link.href}
+                            href={link.href}
+                            onClick={closeMenu}
+                            style={{
+                                fontFamily: "var(--font-syne)",
+                                fontWeight: 900,
+                                fontSize: "10vw",
+                                color: "#fff",
+                                textDecoration: "none",
+                                letterSpacing: -2,
+                                textTransform: "uppercase",
+                                transition: "all 0.3s ease",
+                                opacity: menuOpen ? 1 : 0,
+                                transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                                transitionDelay: `${0.1 + i * 0.1}s`,
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
+                        >
+                            {link.label}
+                        </a>
+                    ))}
+                </div>
+
+                <div
+                    style={{
+                        width: 40,
+                        height: 1,
+                        background: "#FF3B30",
+                        margin: "20px 0",
+                        opacity: menuOpen ? 1 : 0,
+                        transition: "all 0.5s ease",
+                        transitionDelay: "0.5s"
+                    }}
+                />
+
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+                    <Link
+                        href="/support"
                         onClick={closeMenu}
                         style={{
-                            fontFamily: "var(--font-syne)",
-                            fontWeight: 900,
-                            fontSize: 28,
-                            color: "#fff",
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "#555",
                             textDecoration: "none",
-                            letterSpacing: 2,
+                            letterSpacing: 4,
                             textTransform: "uppercase",
-                            transition: "color 0.3s ease",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            opacity: menuOpen ? 1 : 0,
+                            transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                            transitionDelay: "0.6s",
                         }}
                     >
-                        {link.label}
+                        <span style={{ color: "#FF3B30" }}>♥</span>
+                        SUPPORT
+                    </Link>
+
+                    <div
+                        style={{
+                            opacity: menuOpen ? 1 : 0,
+                            transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                            transitionDelay: "0.7s",
+                        }}
+                    >
+                        <CharchaLink onClick={closeMenu} />
+                    </div>
+
+                    <a
+                        href="#contact"
+                        onClick={closeMenu}
+                        style={{
+                            marginTop: 10,
+                            fontFamily: "var(--font-syne)",
+                            fontWeight: 700,
+                            fontSize: 14,
+                            color: "#000",
+                            textDecoration: "none",
+                            padding: "16px 40px",
+                            background: "#FF3B30",
+                            borderRadius: 999,
+                            opacity: menuOpen ? 1 : 0,
+                            transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                            transitionDelay: "0.8s",
+                        }}
+                    >
+                        Get in Touch
                     </a>
-                ))}
-
-                <div style={{ width: 40, height: 1, background: "#FF3B30", margin: "8px 0" }} />
-
-                <Link
-                    href="/support"
-                    onClick={closeMenu}
-                    style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 14,
-                        color: "#555",
-                        textDecoration: "none",
-                        letterSpacing: 3,
-                        textTransform: "uppercase",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                    }}
-                >
-                    <span style={{ color: "#FF3B30" }}>♥</span>
-                    SUPPORT
-                </Link>
-
-                <CharchaLink onClick={closeMenu} />
-
-                <a
-                    href="#contact"
-                    onClick={closeMenu}
-                    style={{
-                        marginTop: 16,
-                        fontFamily: "var(--font-syne)",
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: "#000",
-                        textDecoration: "none",
-                        padding: "16px 40px",
-                        background: "#FF3B30",
-                        borderRadius: 999,
-                    }}
-                >
-                    Get in Touch
-                </a>
+                </div>
             </div>
 
             <style jsx>{`
                 @media (max-width: 768px) {
                     .main-nav {
-                        padding: 16px 20px !important;
+                        padding: 16px 24px !important;
                     }
                     .nav-desktop-links {
                         display: none !important;

@@ -80,8 +80,11 @@ export default function CommunityPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [username, setUsername] = useState<string>("");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     const scrollToBottom = useCallback(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -205,9 +208,24 @@ export default function CommunityPage() {
     const activeChannelData = CHANNELS.find((c) => c.name === activeChannel);
 
     return (
-        <div style={{ display: "flex", height: "100vh", background: "#000", overflow: "hidden" }}>
+        <div style={{ display: "flex", height: "100vh", background: "#000", overflow: "hidden", position: "relative" }}>
+            {/* Overlay for mobile sidebar */}
+            {sidebarOpen && (
+                <div
+                    onClick={toggleSidebar}
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(4px)",
+                        zIndex: 100,
+                    }}
+                />
+            )}
+
             {/* ─── Left Sidebar ─── */}
             <div
+                className={`left-sidebar ${sidebarOpen ? "open" : ""}`}
                 style={{
                     width: 280,
                     background: "#050505",
@@ -216,6 +234,7 @@ export default function CommunityPage() {
                     flexDirection: "column",
                     flexShrink: 0,
                     overflow: "hidden",
+                    zIndex: 101,
                 }}
             >
                 {/* Logo area */}
@@ -406,26 +425,49 @@ export default function CommunityPage() {
                         height: 64,
                         background: "#050505",
                         borderBottom: "1px solid #111",
-                        padding: "0 32px",
+                        padding: "0 20px",
                         display: "flex",
                         alignItems: "center",
-                        gap: 16,
+                        gap: 12,
                         flexShrink: 0,
                     }}
                 >
+                    {/* Mobile Hamburger */}
+                    <button
+                        className="mobile-sidebar-toggle"
+                        onClick={toggleSidebar}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            color: "#fff",
+                            cursor: "pointer",
+                            padding: 8,
+                            display: "none",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+
                     <span style={{ color: "#FF3B30", fontSize: 18, fontWeight: 700 }}>#</span>
-                    <span style={{ fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 18, color: "#fff" }}>
+                    <span style={{ fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 16, color: "#fff" }}>
                         {activeChannel}
                     </span>
-                    <div style={{ width: 1, height: 24, background: "#222" }} />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#444" }}>
+                    <div className="header-divider" style={{ width: 1, height: 20, background: "#222" }} />
+                    <span className="channel-desc" style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#444" }}>
                         {activeChannelData?.desc}
                     </span>
+
                     <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div className="online-indicator" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#32D74B" }} />
                             <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#555" }}>
-                                12 online
+                                12
                             </span>
                         </div>
                         {/* Search icon */}
@@ -438,19 +480,20 @@ export default function CommunityPage() {
                     {/* Back to home */}
                     <Link
                         href="/"
+                        className="back-to-home"
                         style={{
                             fontFamily: "var(--font-mono)",
-                            fontSize: 11,
+                            fontSize: 10,
                             color: "#555",
                             textDecoration: "none",
                             letterSpacing: 1,
                             transition: "color 0.2s ease",
-                            marginLeft: 16,
+                            marginLeft: 8,
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
                         onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                     >
-                        ← THESIDEJOB
+                        <span className="back-text">← TSJ</span>
                     </Link>
                 </div>
 
@@ -771,6 +814,30 @@ export default function CommunityPage() {
                 }
                 @media (max-width: 900px) {
                     .right-sidebar {
+                        display: none;
+                    }
+                    .back-text {
+                        display: none;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .left-sidebar {
+                        position: absolute !important;
+                        left: -280px;
+                        top: 0;
+                        bottom: 0;
+                        transition: transform 0.3s ease !important;
+                    }
+                    .left-sidebar.open {
+                        transform: translateX(280px);
+                    }
+                    .mobile-sidebar-toggle {
+                        display: flex !important;
+                    }
+                    .channel-desc {
+                        display: none;
+                    }
+                    .header-divider {
                         display: none;
                     }
                 }

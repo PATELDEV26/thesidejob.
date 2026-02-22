@@ -608,10 +608,15 @@ export default function JoinUs() {
                 }
                 @media (max-width: 768px) {
                     .joinus-section {
-                        padding: 80px 5vw !important;
+                        padding: 60px 20px !important;
                     }
                     .form-grid-2col {
                         grid-template-columns: 1fr;
+                        gap: 20px !important;
+                    }
+                    h2 {
+                        font-size: 40px !important;
+                        letter-spacing: -1px !important;
                     }
                 }
             `}</style>

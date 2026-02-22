@@ -25,6 +25,7 @@ html {
   color: #fff;
   overflow-x: hidden;
   cursor: default;
+  width: 100%;
 }
 
 body {
@@ -34,6 +35,7 @@ body {
   cursor: default;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
 }
 
 body::after {

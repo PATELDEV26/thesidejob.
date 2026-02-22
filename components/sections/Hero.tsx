@@ -162,7 +162,8 @@ export default function Hero() {
                     .hero-grid {
                         grid-template-columns: 1fr !important;
                         min-height: 100vh !important;
-                        padding: 100px 6vw 60px !important;
+                        padding: 120px 24px 60px !important;
+                        gap: 20px !important;
                     }
                     .hero-terminal-col {
                         display: none !important;
@@ -170,7 +171,7 @@ export default function Hero() {
                 }
                 @media (max-width: 480px) {
                     .hero-grid {
-                        padding: 90px 5vw 40px !important;
+                        padding: 100px 20px 40px !important;
                     }
                 }
             `}</style>

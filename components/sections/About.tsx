@@ -432,7 +432,7 @@ export default function About() {
                         width: 100%;
                         height: auto;
                         min-height: auto;
-                        padding: 60px 6vw;
+                        padding: 40px 20px;
                     }
                     .about-panel-number {
                         display: none;
