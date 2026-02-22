@@ -19,28 +19,7 @@ const CHANNELS = [
     { name: "random", desc: "Off-topic, memes, and vibes" },
 ];
 
-const ONLINE_MEMBERS = [
-    { name: "dhariya", role: "Co-Founder", avatar: "DP" },
-    { name: "dev", role: "Co-Founder", avatar: "DP" },
-    { name: "aditya", role: "Co-Founder", avatar: "AG" },
-    { name: "harshit", role: "Co-Founder", avatar: "HP" },
-    { name: "vansh", role: "Co-Founder", avatar: "VK" },
-    { name: "aarav", role: "Full-Stack Dev", avatar: "AA" },
-    { name: "priya", role: "Designer", avatar: "PR" },
-    { name: "rohan", role: "AI Engineer", avatar: "RO" },
-    { name: "neha", role: "Frontend Dev", avatar: "NE" },
-    { name: "arjun", role: "Backend Dev", avatar: "AR" },
-    { name: "sara", role: "Product Manager", avatar: "SA" },
-    { name: "karan", role: "Growth Hacker", avatar: "KA" },
-];
-
-const DM_USERS = [
-    { name: "dhariya", online: true },
-    { name: "dev", online: true },
-    { name: "aditya", online: false },
-    { name: "priya", online: true },
-    { name: "rohan", online: true },
-];
+const QUICK_EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "👎", "🎉", "🚀", "💯", "👀", "🤔", "😎", "🙌", "✅", "❌", "💀"];
 
 interface Message {
     id: string;
@@ -81,8 +60,11 @@ export default function CommunityPage() {
     const [input, setInput] = useState("");
     const [session, setSession] = useState<any>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const [onlineCount, setOnlineCount] = useState(0);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -99,9 +81,11 @@ export default function CommunityPage() {
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
+            setOnlineCount(session ? 1 : 0);
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            setOnlineCount(session ? 1 : 0);
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -162,10 +146,11 @@ export default function CommunityPage() {
     const sendMessage = async () => {
         if (!input.trim() || !session) return;
 
-        const currentName = session.user.user_metadata.full_name || "Anonymous";
+        const currentName = session.user.user_metadata?.full_name || session.user.email || "User";
 
         const content = input.trim();
         setInput(""); // CRITICAL: Clear input field immediately
+        setEmojiPickerOpen(false);
 
         const { error } = await supabase.from("messages").insert([
             {
@@ -333,48 +318,6 @@ export default function CommunityPage() {
                         </div>
                     ))}
 
-                    {/* Direct Messages */}
-                    <div
-                        style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 10,
-                            letterSpacing: 3,
-                            color: "#333",
-                            textTransform: "uppercase",
-                            padding: "24px 20px 12px",
-                        }}
-                    >
-                        DIRECT
-                    </div>
-                    {DM_USERS.map((user) => (
-                        <div
-                            key={user.name}
-                            style={{
-                                padding: "6px 20px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                fontFamily: "var(--font-mono)",
-                                fontSize: 13,
-                                color: "#555",
-                                transition: "color 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = "#888")}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-                        >
-                            <div
-                                style={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: "50%",
-                                    background: user.online ? "#32D74B" : "#333",
-                                    flexShrink: 0,
-                                }}
-                            />
-                            {user.name}
-                        </div>
-                    ))}
                 </div>
 
                 {/* Bottom user */}
@@ -389,20 +332,41 @@ export default function CommunityPage() {
                 >
                     {session ? (
                         <>
-                            <img
-                                src={session.user.user_metadata.avatar_url}
-                                alt="avatar"
-                                style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: "50%",
-                                    objectFit: "cover",
-                                    flexShrink: 0,
-                                }}
-                            />
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
-                                    {session.user.user_metadata.full_name}
+                            {session.user.user_metadata?.avatar_url ? (
+                                <img
+                                    src={session.user.user_metadata.avatar_url}
+                                    alt="avatar"
+                                    style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: "50%",
+                                        objectFit: "cover",
+                                        flexShrink: 0,
+                                    }}
+                                />
+                            ) : (
+                                <div
+                                    style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #FF3B30, #7a0000)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontFamily: "var(--font-syne)",
+                                        fontWeight: 900,
+                                        fontSize: 10,
+                                        color: "#fff",
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                                </div>
+                            )}
+                            <div style={{ flex: 1, overflow: "hidden" }}>
+                                <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {session.user.user_metadata?.full_name || session.user.email}
                                 </div>
                             </div>
                             <div
@@ -505,9 +469,9 @@ export default function CommunityPage() {
 
                     <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
                         <div className="online-indicator" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#32D74B" }} />
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: onlineCount > 0 ? "#32D74B" : "#333" }} />
                             <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#555" }}>
-                                12
+                                {onlineCount}
                             </span>
                         </div>
                         {/* Search icon */}
@@ -684,17 +648,92 @@ export default function CommunityPage() {
                                 onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,59,48,0.4)")}
                                 onBlur={(e) => (e.currentTarget.style.borderColor = "#1a1a1a")}
                             />
+                            {/* Hidden file input for attachment */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                style={{ display: "none" }}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        setInput((prev) => prev + ` [📎 ${file.name}]`);
+                                        inputRef.current?.focus();
+                                    }
+                                    e.target.value = "";
+                                }}
+                            />
                             {/* Attachment icon */}
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
+                            <svg
+                                width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                style={{ color: "#333", cursor: "pointer", transition: "color 0.15s ease" }}
+                                onClick={() => fileInputRef.current?.click()}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
+                            >
                                 <path d="M17 10l-7.5 7.5a5 5 0 01-7-7L10 3a3.33 3.33 0 014.7 4.7l-7.5 7.5a1.67 1.67 0 01-2.3-2.3L12.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                             </svg>
                             {/* Emoji icon */}
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
-                                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-                                <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
-                                <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
-                            </svg>
+                            <div style={{ position: "relative" }}>
+                                <svg
+                                    width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                    style={{ color: emojiPickerOpen ? "#FF3B30" : "#333", cursor: "pointer", transition: "color 0.15s ease" }}
+                                    onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                    onMouseLeave={(e) => { if (!emojiPickerOpen) e.currentTarget.style.color = "#333"; }}
+                                >
+                                    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+                                    <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
+                                    <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
+                                </svg>
+                                {emojiPickerOpen && (
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            bottom: 36,
+                                            right: 0,
+                                            background: "#0d0d0d",
+                                            border: "1px solid #1e1e1e",
+                                            padding: 12,
+                                            display: "grid",
+                                            gridTemplateColumns: "repeat(4, 1fr)",
+                                            gap: 4,
+                                            zIndex: 50,
+                                            width: 200,
+                                        }}
+                                    >
+                                        {QUICK_EMOJIS.map((emoji) => (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => {
+                                                    setInput((prev) => prev + emoji);
+                                                    setEmojiPickerOpen(false);
+                                                    inputRef.current?.focus();
+                                                }}
+                                                style={{
+                                                    background: "transparent",
+                                                    border: "1px solid transparent",
+                                                    fontSize: 20,
+                                                    cursor: "pointer",
+                                                    padding: "6px",
+                                                    borderRadius: 4,
+                                                    transition: "all 0.1s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "#111";
+                                                    e.currentTarget.style.borderColor = "#333";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "transparent";
+                                                    e.currentTarget.style.borderColor = "transparent";
+                                                }}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             {/* Send button */}
                             <button
                                 onClick={sendMessage}
@@ -788,35 +827,46 @@ export default function CommunityPage() {
                 >
                     ONLINE NOW
                 </div>
-                {ONLINE_MEMBERS.map((member) => (
+                {session ? (
                     <div
-                        key={member.name}
                         style={{
                             display: "flex",
                             alignItems: "center",
                             gap: 10,
                             padding: "8px 0",
-                            cursor: "pointer",
                         }}
                     >
                         <div style={{ position: "relative" }}>
-                            <div
-                                style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: "50%",
-                                    background: `linear-gradient(135deg, #${Math.abs(member.name.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontFamily: "var(--font-syne)",
-                                    fontWeight: 900,
-                                    fontSize: 10,
-                                    color: "#fff",
-                                }}
-                            >
-                                {member.avatar}
-                            </div>
+                            {session.user.user_metadata?.avatar_url ? (
+                                <img
+                                    src={session.user.user_metadata.avatar_url}
+                                    alt="avatar"
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: "50%",
+                                        objectFit: "cover",
+                                    }}
+                                />
+                            ) : (
+                                <div
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #FF3B30, #7a0000)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontFamily: "var(--font-syne)",
+                                        fontWeight: 900,
+                                        fontSize: 10,
+                                        color: "#fff",
+                                    }}
+                                >
+                                    {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                                </div>
+                            )}
                             <div
                                 style={{
                                     position: "absolute",
@@ -832,14 +882,25 @@ export default function CommunityPage() {
                         </div>
                         <div>
                             <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
-                                {member.name}
+                                {session.user.user_metadata?.full_name || session.user.email}
                             </div>
                             <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#444" }}>
-                                {member.role}
+                                Online
                             </div>
                         </div>
                     </div>
-                ))}
+                ) : (
+                    <div
+                        style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "#333",
+                            padding: "8px 0",
+                        }}
+                    >
+                        No one online
+                    </div>
+                )}
 
                 {/* Build Sprint Event */}
                 <div

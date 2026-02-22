@@ -297,6 +297,43 @@ export default function LoginPage() {
                         />
                     </div>
 
+                    {!isSignUp && (
+                        <div style={{ textAlign: "right", marginBottom: 16, marginTop: -8 }}>
+                            <span
+                                onClick={async () => {
+                                    if (!email.trim()) {
+                                        setError("Enter your email above first, then click Forgot Password.");
+                                        return;
+                                    }
+                                    setError("");
+                                    setLoading(true);
+                                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                                        redirectTo: `${window.location.origin}/login`,
+                                    });
+                                    setLoading(false);
+                                    if (error) {
+                                        setError(error.message);
+                                    } else {
+                                        setSuccess("Password reset link sent! Check your email.");
+                                    }
+                                }}
+                                style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: 11,
+                                    color: "#555",
+                                    cursor: "pointer",
+                                    textDecoration: "underline",
+                                    textUnderlineOffset: 3,
+                                    transition: "color 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                            >
+                                Forgot password?
+                            </span>
+                        </div>
+                    )}
+
                     <button
                         type="submit"
                         disabled={loading}
