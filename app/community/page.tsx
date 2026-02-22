@@ -51,10 +51,7 @@ interface Message {
     reactions?: { emoji: string; count: number }[];
 }
 
-// Initial messages are now fetched from Supabase
-
 function formatCode(text: string): React.ReactNode {
-    // Handle inline code with backticks
     const parts = text.split(/(`[^`]+`)/g);
     return parts.map((part, i) => {
         if (part.startsWith("`") && part.endsWith("`")) {
@@ -90,19 +87,16 @@ export default function CommunityPage() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, []);
 
-    // Helper to format initials from name
     const getInitials = (name: string) => {
         if (!name) return "??";
         return name.slice(0, 2).toUpperCase();
     };
 
-    // Load username from local storage
     useEffect(() => {
         const savedName = localStorage.getItem("tsj_username");
         if (savedName) setUsername(savedName);
     }, []);
 
-    // Load existing messages and set up Realtime
     useEffect(() => {
         const fetchExistingMessages = async () => {
             const { data, error } = await supabase
@@ -129,14 +123,14 @@ export default function CommunityPage() {
 
         fetchExistingMessages();
 
-        // 1. Set up the specific channel requested
+        // 1. Set up Realtime Channel with Status Monitor
         const channel = supabase
             .channel("custom-all-channel")
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "messages" },
                 (payload) => {
-                    // 2. State update using previous state
+                    console.log("🔥 INCOMING MESSAGE DETECTED:", payload.new);
                     const m = payload.new as any;
                     const newMsg: Message = {
                         id: m.id,
@@ -152,9 +146,11 @@ export default function CommunityPage() {
                     setMessages((prev) => [...prev, newMsg]);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                // THIS WILL TELL US IF THE CONNECTION IS WORKING
+                console.log("📡 Supabase Realtime Status:", status);
+            });
 
-        // 3. Cleanup function to remove channel on unmount
         return () => {
             supabase.removeChannel(channel);
         };
