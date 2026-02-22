@@ -97,9 +97,10 @@ export default function CommunityPage() {
         if (savedName) setUsername(savedName);
     }, []);
 
-    // 1. Fetch existing messages
+    // 1. Fetch existing messages & Set up Realtime
     useEffect(() => {
         const fetchMessages = async () => {
+            console.log("Fetching initial messages...");
             const { data, error } = await supabase
                 .from("messages")
                 .select("*")
@@ -110,9 +111,9 @@ export default function CommunityPage() {
             } else if (data) {
                 const formattedMessages: Message[] = data.map((m: any) => ({
                     id: m.id,
-                    sender: m.sender_name,
-                    avatar: getInitials(m.sender_name),
-                    text: m.content,
+                    sender: m.sender_name || "Anonymous",
+                    avatar: getInitials(m.sender_name || "A"),
+                    text: m.content || "",
                     time: new Date(m.created_at).toLocaleTimeString("en-US", {
                         hour: "numeric",
                         minute: "2-digit",
@@ -126,30 +127,38 @@ export default function CommunityPage() {
         fetchMessages();
 
         // 2. Realtime subscription
+        console.log("Initializing Supabase Realtime subscription...");
         const channel = supabase
-            .channel("public:messages")
+            .channel("messages_channel")
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "messages" },
                 (payload) => {
+                    console.log("New message received via Realtime:", payload);
                     const newMessage = payload.new as any;
+
                     const formattedMsg: Message = {
                         id: newMessage.id,
-                        sender: newMessage.sender_name,
-                        avatar: getInitials(newMessage.sender_name),
-                        text: newMessage.content,
+                        sender: newMessage.sender_name || "Anonymous",
+                        avatar: getInitials(newMessage.sender_name || "A"),
+                        text: newMessage.content || "",
                         time: new Date(newMessage.created_at).toLocaleTimeString("en-US", {
                             hour: "numeric",
                             minute: "2-digit",
                             hour12: true,
                         }),
                     };
-                    setMessages((prev) => [...prev, formattedMsg]);
+
+                    // Functional update to ensure we have the latest state
+                    setMessages((prevMessages) => [...prevMessages, formattedMsg]);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log("Realtime subscription status:", status);
+            });
 
         return () => {
+            console.log("Cleaning up Realtime subscription...");
             supabase.removeChannel(channel);
         };
     }, []);
@@ -179,17 +188,23 @@ export default function CommunityPage() {
         }
 
         const content = input.trim();
-        setInput(""); // Optimistic clear
+        setInput(""); // Clear input immediately after submission
 
-        const { error } = await supabase.from("messages").insert([
-            {
-                content,
-                sender_name: currentName,
-            },
-        ]);
+        try {
+            const { error } = await supabase.from("messages").insert([
+                {
+                    content,
+                    sender_name: currentName,
+                },
+            ]);
 
-        if (error) {
-            console.error("Error sending message:", error);
+            if (error) {
+                console.error("Error sending message to Supabase:", error);
+                // Optionally restore input if it failed
+                // setInput(content);
+            }
+        } catch (err) {
+            console.error("Unexpected error sending message:", err);
         }
     };
 
