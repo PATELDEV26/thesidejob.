@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const CHANNELS = [
     { name: "general", desc: "The main channel for all things Thesidejob" },
@@ -45,62 +46,7 @@ interface Message {
     reactions?: { emoji: string; count: number }[];
 }
 
-const INITIAL_MESSAGES: Message[] = [
-    {
-        id: "1", sender: "dhariya", avatar: "DP",
-        text: "yo everyone 👋 just pushed the new landing page. check it out and drop feedback",
-        time: "10:23 PM",
-    },
-    {
-        id: "2", sender: "dev", avatar: "DP",
-        text: "looks sick. the scroll animations are butter smooth",
-        time: "10:24 PM",
-        reactions: [{ emoji: "🚀", count: 3 }],
-    },
-    {
-        id: "3", sender: "aditya", avatar: "AG",
-        text: "the particle field goes crazy hard 🔥",
-        time: "10:25 PM",
-        reactions: [{ emoji: "🔥", count: 5 }],
-    },
-    {
-        id: "4", sender: "harshit", avatar: "HP",
-        text: "just finished the backend for the application form. API is live at `/api/apply`",
-        time: "10:28 PM",
-    },
-    {
-        id: "5", sender: "vansh", avatar: "VK",
-        text: "nice. I'll wire it up tomorrow. also working on something cool...",
-        time: "10:30 PM",
-    },
-    {
-        id: "6", sender: "vansh", avatar: "VK",
-        text: "built a real-time collaboration tool this weekend. `const collab = new RealtimeSync({ latency: '2ms' })`",
-        time: "10:31 PM",
-    },
-    {
-        id: "7", sender: "aarav", avatar: "AA",
-        text: "2ms latency?? that's insane. what stack?",
-        time: "10:33 PM",
-    },
-    {
-        id: "8", sender: "vansh", avatar: "VK",
-        text: "WebSockets + Redis pub/sub + a custom CRDT implementation. might open source it",
-        time: "10:34 PM",
-        reactions: [{ emoji: "👍", count: 4 }, { emoji: "🚀", count: 2 }],
-    },
-    {
-        id: "9", sender: "priya", avatar: "PR",
-        text: "team, I redesigned the onboarding flow. going from 5 steps to 3. conversion should jump 40%+",
-        time: "10:40 PM",
-    },
-    {
-        id: "10", sender: "dhariya", avatar: "DP",
-        text: "LFG 🔴 this is why we build at 2am. keep shipping everyone",
-        time: "10:42 PM",
-        reactions: [{ emoji: "❤️", count: 7 }, { emoji: "🔥", count: 4 }],
-    },
-];
+// Initial messages are now fetched from Supabase
 
 function formatCode(text: string): React.ReactNode {
     // Handle inline code with backticks
@@ -129,7 +75,7 @@ function formatCode(text: string): React.ReactNode {
 
 export default function CommunityPage() {
     const [activeChannel, setActiveChannel] = useState("general");
-    const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -138,21 +84,90 @@ export default function CommunityPage() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, []);
 
+    // Helper to format initials from name
+    const getInitials = (name: string) => {
+        if (!name) return "??";
+        return name.slice(0, 2).toUpperCase();
+    };
+
+    // 1. Fetch existing messages
+    useEffect(() => {
+        const fetchMessages = async () => {
+            const { data, error } = await supabase
+                .from("messages")
+                .select("*")
+                .order("created_at", { ascending: true });
+
+            if (error) {
+                console.error("Error fetching messages:", error);
+            } else if (data) {
+                const formattedMessages: Message[] = data.map((m: any) => ({
+                    id: m.id,
+                    sender: m.sender_name,
+                    avatar: getInitials(m.sender_name),
+                    text: m.content,
+                    time: new Date(m.created_at).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                    }),
+                }));
+                setMessages(formattedMessages);
+            }
+        };
+
+        fetchMessages();
+
+        // 2. Realtime subscription
+        const channel = supabase
+            .channel("public:messages")
+            .on(
+                "postgres_changes",
+                { event: "INSERT", schema: "public", table: "messages" },
+                (payload) => {
+                    const newMessage = payload.new as any;
+                    const formattedMsg: Message = {
+                        id: newMessage.id,
+                        sender: newMessage.sender_name,
+                        avatar: getInitials(newMessage.sender_name),
+                        text: newMessage.content,
+                        time: new Date(newMessage.created_at).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                        }),
+                    };
+                    setMessages((prev) => [...prev, formattedMsg]);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     useEffect(() => {
         scrollToBottom();
     }, [messages, scrollToBottom]);
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         if (!input.trim()) return;
-        const newMsg: Message = {
-            id: Date.now().toString(),
-            sender: "you",
-            avatar: "YO",
-            text: input.trim(),
-            time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-        };
-        setMessages((prev) => [...prev, newMsg]);
-        setInput("");
+
+        const content = input.trim();
+        setInput(""); // Optimistic clear
+
+        const { error } = await supabase.from("messages").insert([
+            {
+                content,
+                sender_name: "you", // In a real app, this would be the logged-in user's name
+            },
+        ]);
+
+        if (error) {
+            console.error("Error sending message:", error);
+            // Optionally revert input or show error
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
