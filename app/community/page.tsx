@@ -79,7 +79,7 @@ export default function CommunityPage() {
     const [activeChannel, setActiveChannel] = useState("general");
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
-    const [username, setUsername] = useState<string>("");
+    const [session, setSession] = useState<any>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -95,10 +95,24 @@ export default function CommunityPage() {
         return name.slice(0, 2).toUpperCase();
     };
 
+    // Fetch initial session & listen for auth changes
     useEffect(() => {
-        const savedName = localStorage.getItem("tsj_username");
-        if (savedName) setUsername(savedName);
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+        return () => subscription.unsubscribe();
     }, []);
+
+    const handleGoogleLogin = async () => {
+        await supabase.auth.signInWithOAuth({ provider: 'google' });
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+    };
 
     // Load existing messages and setup "Short-Polling" Fallback
     useEffect(() => {
@@ -145,25 +159,10 @@ export default function CommunityPage() {
         scrollToBottom();
     }, [messages, scrollToBottom]);
 
-    const handleSetName = () => {
-        const name = prompt("Enter your name for Charcha:");
-        if (name?.trim()) {
-            localStorage.setItem("tsj_username", name.trim());
-            setUsername(name.trim());
-        }
-    };
-
     const sendMessage = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || !session) return;
 
-        let currentName = username;
-        if (!currentName) {
-            const name = prompt("Please enter your name to send messages:");
-            if (!name?.trim()) return;
-            currentName = name.trim();
-            localStorage.setItem("tsj_username", currentName);
-            setUsername(currentName);
-        }
+        const currentName = session.user.user_metadata.full_name || "Anonymous";
 
         const content = input.trim();
         setInput(""); // CRITICAL: Clear input field immediately
@@ -375,48 +374,80 @@ export default function CommunityPage() {
 
                 {/* Bottom user */}
                 <div
-                    onClick={handleSetName}
                     style={{
                         padding: "16px 20px",
                         borderTop: "1px solid #111",
                         display: "flex",
                         alignItems: "center",
                         gap: 12,
-                        cursor: "pointer",
                     }}
                 >
-                    <div
-                        style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            background: "linear-gradient(135deg, #FF3B30, #7a0000)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontFamily: "var(--font-syne)",
-                            fontWeight: 900,
-                            fontSize: 10,
-                            color: "#fff",
-                        }}
-                    >
-                        {getInitials(username || "ME")}
-                    </div>
-                    <div>
-                        <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
-                            {username || "Set your name"}
+                    {session ? (
+                        <>
+                            <img
+                                src={session.user.user_metadata.avatar_url}
+                                alt="avatar"
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                }}
+                            />
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
+                                    {session.user.user_metadata.full_name}
+                                </div>
+                            </div>
+                            <div
+                                onClick={handleLogout}
+                                style={{
+                                    marginLeft: "auto",
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: 10,
+                                    color: "#555",
+                                    cursor: "pointer",
+                                    transition: "color 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                            >
+                                Log out
+                            </div>
+                        </>
+                    ) : (
+                        <div
+                            onClick={handleGoogleLogin}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                cursor: "pointer",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    background: "#111",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontFamily: "var(--font-syne)",
+                                    fontWeight: 900,
+                                    fontSize: 10,
+                                    color: "#555",
+                                }}
+                            >
+                                ??
+                            </div>
+                            <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#555" }}>
+                                Sign in
+                            </div>
                         </div>
-                    </div>
-                    <div
-                        style={{ marginLeft: "auto", color: "#333" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
-                    >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.5" />
-                            <path d="M13.3 6.7a1.3 1.3 0 011.4.8l.3.5a1.3 1.3 0 010 1.3l-.3.5a1.3 1.3 0 01-1.4.8 1.3 1.3 0 00-1.2.7 1.3 1.3 0 00-.1 1.4 1.3 1.3 0 01-.4 1.5l-.5.3a1.3 1.3 0 01-1.3 0l-.5-.3a1.3 1.3 0 00-1.4 0 1.3 1.3 0 00-.7 1.2 1.3 1.3 0 01-.8 1.3h-.6a1.3 1.3 0 01-1.3 0h0a1.3 1.3 0 01-.7-1.2 1.3 1.3 0 00-.7-1.2 1.3 1.3 0 00-1.4 0 1.3 1.3 0 01-1.6-.4l-.3-.5a1.3 1.3 0 010-1.3l.3-.5a1.3 1.3 0 00.1-1.4 1.3 1.3 0 00-1.2-.7A1.3 1.3 0 011 8.3v-.6a1.3 1.3 0 01.8-1.3 1.3 1.3 0 001.2-.7 1.3 1.3 0 00-.1-1.4A1.3 1.3 0 013.3 3l.5-.3a1.3 1.3 0 011.3 0l.5.3a1.3 1.3 0 001.4 0 1.3 1.3 0 00.7-1.2A1.3 1.3 0 018.5 1h.6" stroke="currentColor" strokeWidth="1" />
-                        </svg>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -531,7 +562,7 @@ export default function CommunityPage() {
                                             width: 36,
                                             height: 36,
                                             borderRadius: "50%",
-                                            background: msg.sender === username
+                                            background: (session && msg.sender === session.user.user_metadata.full_name)
                                                 ? "linear-gradient(135deg, #FF3B30, #7a0000)"
                                                 : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
                                             display: "flex",
@@ -624,58 +655,91 @@ export default function CommunityPage() {
                         flexShrink: 0,
                     }}
                 >
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={`Message #${activeChannel}`}
-                        style={{
-                            flex: 1,
-                            background: "#111",
-                            border: "1px solid #1a1a1a",
-                            color: "#fff",
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 13,
-                            padding: "14px 20px",
-                            outline: "none",
-                            transition: "border-color 0.2s ease",
-                        }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,59,48,0.4)")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "#1a1a1a")}
-                    />
-                    {/* Attachment icon */}
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
-                        <path d="M17 10l-7.5 7.5a5 5 0 01-7-7L10 3a3.33 3.33 0 014.7 4.7l-7.5 7.5a1.67 1.67 0 01-2.3-2.3L12.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                    {/* Emoji icon */}
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
-                        <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
-                        <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
-                    </svg>
-                    {/* Send button */}
-                    <button
-                        onClick={sendMessage}
-                        style={{
-                            width: 36,
-                            height: 36,
-                            background: input.trim() ? "#FF3B30" : "#111",
-                            border: "none",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: input.trim() ? "pointer" : "default",
-                            transition: "background 0.2s ease",
-                        }}
-                    >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M14 2L7 9" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M14 2L9.5 14.5L7 9L1.5 6.5L14 2Z" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
+                    {session ? (
+                        <>
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={`Message #${activeChannel}`}
+                                style={{
+                                    flex: 1,
+                                    background: "#111",
+                                    border: "1px solid #1a1a1a",
+                                    color: "#fff",
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: 13,
+                                    padding: "14px 20px",
+                                    outline: "none",
+                                    transition: "border-color 0.2s ease",
+                                }}
+                                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,59,48,0.4)")}
+                                onBlur={(e) => (e.currentTarget.style.borderColor = "#1a1a1a")}
+                            />
+                            {/* Attachment icon */}
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
+                                <path d="M17 10l-7.5 7.5a5 5 0 01-7-7L10 3a3.33 3.33 0 014.7 4.7l-7.5 7.5a1.67 1.67 0 01-2.3-2.3L12.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                            {/* Emoji icon */}
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#333", cursor: "pointer" }}>
+                                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+                                <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
+                                <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
+                            </svg>
+                            {/* Send button */}
+                            <button
+                                onClick={sendMessage}
+                                style={{
+                                    width: 36,
+                                    height: 36,
+                                    background: input.trim() ? "#FF3B30" : "#111",
+                                    border: "none",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: input.trim() ? "pointer" : "default",
+                                    transition: "background 0.2s ease",
+                                }}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M14 2L7 9" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" />
+                                    <path d="M14 2L9.5 14.5L7 9L1.5 6.5L14 2Z" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={handleGoogleLogin}
+                            style={{
+                                width: "100%",
+                                height: 48,
+                                background: "linear-gradient(135deg, #FF3B30, #b71c1c)",
+                                border: "none",
+                                borderRadius: 0,
+                                color: "#fff",
+                                fontFamily: "var(--font-syne)",
+                                fontWeight: 800,
+                                fontSize: 14,
+                                letterSpacing: 1,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 10,
+                                transition: "opacity 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 48 48">
+                                <path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                            </svg>
+                            Sign in with Google to Chat
+                        </button>
+                    )}
                 </div>
             </div>
 
