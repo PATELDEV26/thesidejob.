@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+// CRITICAL: Initialize Supabase OUTSIDE the React component to prevent re-renders dropping connection
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const CHANNELS = [
     { name: "general", desc: "The main channel for all things Thesidejob" },
@@ -97,19 +102,16 @@ export default function CommunityPage() {
         if (savedName) setUsername(savedName);
     }, []);
 
-    // 1. Fetch existing messages & Set up Realtime
+    // Load existing messages and set up Realtime
     useEffect(() => {
-        const fetchMessages = async () => {
-            console.log("Fetching initial messages...");
+        const fetchExistingMessages = async () => {
             const { data, error } = await supabase
                 .from("messages")
                 .select("*")
                 .order("created_at", { ascending: true });
 
-            if (error) {
-                console.error("Error fetching messages:", error);
-            } else if (data) {
-                const formattedMessages: Message[] = data.map((m: any) => ({
+            if (data) {
+                const formatted = data.map((m: any) => ({
                     id: m.id,
                     sender: m.sender_name || "Anonymous",
                     avatar: getInitials(m.sender_name || "A"),
@@ -120,45 +122,40 @@ export default function CommunityPage() {
                         hour12: true,
                     }),
                 }));
-                setMessages(formattedMessages);
+                setMessages(formatted);
             }
+            if (error) console.error("Fetch error:", error);
         };
 
-        fetchMessages();
+        fetchExistingMessages();
 
-        // 2. Realtime subscription
-        console.log("Initializing Supabase Realtime subscription...");
+        // 1. Set up the specific channel requested
         const channel = supabase
-            .channel("messages_channel")
+            .channel("custom-all-channel")
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "messages" },
                 (payload) => {
-                    console.log("New message received via Realtime:", payload);
-                    const newMessage = payload.new as any;
-
-                    const formattedMsg: Message = {
-                        id: newMessage.id,
-                        sender: newMessage.sender_name || "Anonymous",
-                        avatar: getInitials(newMessage.sender_name || "A"),
-                        text: newMessage.content || "",
-                        time: new Date(newMessage.created_at).toLocaleTimeString("en-US", {
+                    // 2. State update using previous state
+                    const m = payload.new as any;
+                    const newMsg: Message = {
+                        id: m.id,
+                        sender: m.sender_name || "Anonymous",
+                        avatar: getInitials(m.sender_name || "A"),
+                        text: m.content || "",
+                        time: new Date(m.created_at).toLocaleTimeString("en-US", {
                             hour: "numeric",
                             minute: "2-digit",
                             hour12: true,
                         }),
                     };
-
-                    // Functional update to ensure we have the latest state
-                    setMessages((prevMessages) => [...prevMessages, formattedMsg]);
+                    setMessages((prev) => [...prev, newMsg]);
                 }
             )
-            .subscribe((status) => {
-                console.log("Realtime subscription status:", status);
-            });
+            .subscribe();
 
+        // 3. Cleanup function to remove channel on unmount
         return () => {
-            console.log("Cleaning up Realtime subscription...");
             supabase.removeChannel(channel);
         };
     }, []);
@@ -188,23 +185,17 @@ export default function CommunityPage() {
         }
 
         const content = input.trim();
-        setInput(""); // Clear input immediately after submission
+        setInput(""); // CRITICAL: Clear input field immediately
 
-        try {
-            const { error } = await supabase.from("messages").insert([
-                {
-                    content,
-                    sender_name: currentName,
-                },
-            ]);
+        const { error } = await supabase.from("messages").insert([
+            {
+                content,
+                sender_name: currentName,
+            },
+        ]);
 
-            if (error) {
-                console.error("Error sending message to Supabase:", error);
-                // Optionally restore input if it failed
-                // setInput(content);
-            }
-        } catch (err) {
-            console.error("Unexpected error sending message:", err);
+        if (error) {
+            console.error("Error sending message:", error);
         }
     };
 
