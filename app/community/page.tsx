@@ -62,6 +62,9 @@ export default function CommunityPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [onlineCount, setOnlineCount] = useState(0);
+    const [displayName, setDisplayName] = useState("");
+    const [showNamePrompt, setShowNamePrompt] = useState(false);
+    const [nameInput, setNameInput] = useState("");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,13 +85,23 @@ export default function CommunityPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setOnlineCount(session ? 1 : 0);
+            if (session) setShowNamePrompt(true);
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             setOnlineCount(session ? 1 : 0);
+            if (session) setShowNamePrompt(true);
         });
         return () => subscription.unsubscribe();
     }, []);
+
+    const handleNameSubmit = () => {
+        const name = nameInput.trim();
+        if (!name) return;
+        setDisplayName(name);
+        setShowNamePrompt(false);
+        setNameInput("");
+    };
 
     const handleGoogleLogin = async () => {
         await supabase.auth.signInWithOAuth({ provider: 'google' });
@@ -144,9 +157,9 @@ export default function CommunityPage() {
     }, [messages, scrollToBottom]);
 
     const sendMessage = async () => {
-        if (!input.trim() || !session) return;
+        if (!input.trim() || !session || !displayName) return;
 
-        const currentName = session.user.user_metadata?.full_name || session.user.email || "User";
+        const currentName = displayName;
 
         const content = input.trim();
         setInput(""); // CRITICAL: Clear input field immediately
@@ -196,6 +209,71 @@ export default function CommunityPage() {
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#000", overflow: "hidden", position: "relative" }}>
+            {/* ─── Name Prompt Modal ─── */}
+            {showNamePrompt && session && (
+                <div style={{
+                    position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+                    backdropFilter: "blur(12px)", zIndex: 9999,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                    <div style={{
+                        background: "#0a0a0a", border: "1px solid #1e1e1e",
+                        borderRadius: 16, padding: "40px 36px", width: 380,
+                        textAlign: "center",
+                    }}>
+                        <div style={{
+                            width: 56, height: 56, borderRadius: "50%",
+                            background: "linear-gradient(135deg, #FF3B30, #7a0000)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            margin: "0 auto 20px", fontFamily: "var(--font-syne)",
+                            fontWeight: 900, fontSize: 20, color: "#fff",
+                        }}>
+                            {nameInput.trim() ? getInitials(nameInput.trim()) : "?"}
+                        </div>
+                        <h2 style={{
+                            fontFamily: "var(--font-syne)", fontWeight: 900,
+                            fontSize: 22, color: "#fff", marginBottom: 8,
+                        }}>What should we call you?</h2>
+                        <p style={{
+                            fontFamily: "var(--font-mono)", fontSize: 12,
+                            color: "#555", marginBottom: 24,
+                        }}>Enter your display name for the chat</p>
+                        <input
+                            autoFocus
+                            value={nameInput}
+                            onChange={(e) => setNameInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleNameSubmit(); }}
+                            placeholder="Your name..."
+                            maxLength={30}
+                            style={{
+                                width: "100%", padding: "14px 16px",
+                                background: "#111", border: "1px solid #222",
+                                borderRadius: 10, color: "#fff",
+                                fontFamily: "var(--font-syne)", fontSize: 15,
+                                fontWeight: 600, outline: "none",
+                                transition: "border-color 0.2s ease",
+                                marginBottom: 16, boxSizing: "border-box",
+                            }}
+                            onFocus={(e) => (e.target.style.borderColor = "#FF3B30")}
+                            onBlur={(e) => (e.target.style.borderColor = "#222")}
+                        />
+                        <button
+                            onClick={handleNameSubmit}
+                            disabled={!nameInput.trim()}
+                            style={{
+                                width: "100%", padding: "14px 0",
+                                background: nameInput.trim() ? "linear-gradient(135deg, #FF3B30, #7a0000)" : "#1a1a1a",
+                                border: "none", borderRadius: 10,
+                                color: nameInput.trim() ? "#fff" : "#444",
+                                fontFamily: "var(--font-syne)", fontWeight: 800,
+                                fontSize: 14, cursor: nameInput.trim() ? "pointer" : "not-allowed",
+                                transition: "all 0.2s ease",
+                            }}
+                        >JOIN CHARCHA</button>
+                    </div>
+                </div>
+            )}
+
             {/* Overlay for mobile sidebar */}
             {sidebarOpen && (
                 <div
@@ -348,11 +426,11 @@ export default function CommunityPage() {
                                     flexShrink: 0,
                                 }}
                             >
-                                {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                                {getInitials(displayName)}
                             </div>
                             <div style={{ flex: 1, overflow: "hidden" }}>
                                 <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {session.user.user_metadata?.full_name || session.user.email}
+                                    {displayName}
                                 </div>
                             </div>
                             <div
@@ -518,7 +596,7 @@ export default function CommunityPage() {
                                             width: 36,
                                             height: 36,
                                             borderRadius: "50%",
-                                            background: (session && msg.sender === (session.user.user_metadata?.full_name || session.user.email))
+                                            background: (session && msg.sender === displayName)
                                                 ? "linear-gradient(135deg, #FF3B30, #7a0000)"
                                                 : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
                                             display: "flex",
@@ -838,7 +916,7 @@ export default function CommunityPage() {
                                     color: "#fff",
                                 }}
                             >
-                                {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                                {getInitials(displayName)}
                             </div>
                             <div
                                 style={{
@@ -855,7 +933,7 @@ export default function CommunityPage() {
                         </div>
                         <div>
                             <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
-                                {session.user.user_metadata?.full_name || session.user.email}
+                                {displayName}
                             </div>
                             <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#444" }}>
                                 Online
