@@ -77,6 +77,7 @@ export default function CommunityPage() {
     const [activeChannel, setActiveChannel] = useState("general");
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
+    const [username, setUsername] = useState<string>("");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -89,6 +90,12 @@ export default function CommunityPage() {
         if (!name) return "??";
         return name.slice(0, 2).toUpperCase();
     };
+
+    // Load username from local storage
+    useEffect(() => {
+        const savedName = localStorage.getItem("tsj_username");
+        if (savedName) setUsername(savedName);
+    }, []);
 
     // 1. Fetch existing messages
     useEffect(() => {
@@ -151,8 +158,25 @@ export default function CommunityPage() {
         scrollToBottom();
     }, [messages, scrollToBottom]);
 
+    const handleSetName = () => {
+        const name = prompt("Enter your name for Charcha:");
+        if (name?.trim()) {
+            localStorage.setItem("tsj_username", name.trim());
+            setUsername(name.trim());
+        }
+    };
+
     const sendMessage = async () => {
         if (!input.trim()) return;
+
+        let currentName = username;
+        if (!currentName) {
+            const name = prompt("Please enter your name to send messages:");
+            if (!name?.trim()) return;
+            currentName = name.trim();
+            localStorage.setItem("tsj_username", currentName);
+            setUsername(currentName);
+        }
 
         const content = input.trim();
         setInput(""); // Optimistic clear
@@ -160,13 +184,12 @@ export default function CommunityPage() {
         const { error } = await supabase.from("messages").insert([
             {
                 content,
-                sender_name: "you", // In a real app, this would be the logged-in user's name
+                sender_name: currentName,
             },
         ]);
 
         if (error) {
             console.error("Error sending message:", error);
-            // Optionally revert input or show error
         }
     };
 
@@ -328,12 +351,14 @@ export default function CommunityPage() {
 
                 {/* Bottom user */}
                 <div
+                    onClick={handleSetName}
                     style={{
                         padding: "16px 20px",
                         borderTop: "1px solid #111",
                         display: "flex",
                         alignItems: "center",
                         gap: 12,
+                        cursor: "pointer",
                     }}
                 >
                     <div
@@ -351,15 +376,15 @@ export default function CommunityPage() {
                             color: "#fff",
                         }}
                     >
-                        ME
+                        {getInitials(username || "ME")}
                     </div>
                     <div>
                         <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>
-                            you
+                            {username || "Set your name"}
                         </div>
                     </div>
                     <div
-                        style={{ marginLeft: "auto", cursor: "pointer", color: "#333" }}
+                        style={{ marginLeft: "auto", color: "#333" }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
                         onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
                     >
@@ -458,7 +483,7 @@ export default function CommunityPage() {
                                             width: 36,
                                             height: 36,
                                             borderRadius: "50%",
-                                            background: msg.sender === "you"
+                                            background: msg.sender === username
                                                 ? "linear-gradient(135deg, #FF3B30, #7a0000)"
                                                 : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
                                             display: "flex",
