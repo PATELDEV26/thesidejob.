@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, memo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMagneticEffect } from "@/hooks/useMagneticEffect";
+import { supabase } from "@/lib/supabase";
 
 const NAV_LINKS = [
     { label: "SERVICES", href: "#services" },
@@ -40,15 +41,28 @@ function NavLink({ label, href, onClick }: { label: string; href: string; onClic
 }
 
 function CharchaLink({ onClick }: { onClick?: () => void }) {
-    const ref = useRef<HTMLAnchorElement>(null);
+    const ref = useRef<HTMLDivElement>(null);
+    const router = useRouter();
     useMagneticEffect(ref, 0.2);
 
+    const handleCharchaClick = async () => {
+        onClick?.();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            router.push("/community");
+        } else {
+            router.push("/login");
+        }
+    };
+
     return (
-        <Link
+        <div
             ref={ref}
-            href="/community"
             className="nav-link magnetic"
-            onClick={onClick}
+            onClick={handleCharchaClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCharchaClick(); }}
             style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: 10,
@@ -61,6 +75,7 @@ function CharchaLink({ onClick }: { onClick?: () => void }) {
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                cursor: "pointer",
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.color = "#fff";
@@ -79,7 +94,7 @@ function CharchaLink({ onClick }: { onClick?: () => void }) {
                 }}
             />
             CHARCHA
-        </Link>
+        </div>
     );
 }
 

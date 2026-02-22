@@ -241,13 +241,18 @@ export default function CommunityPage() {
             >
                 {/* Logo area */}
                 <div
+                    onClick={() => { if (!session) window.location.href = "/login"; }}
                     style={{
                         padding: "24px 20px",
                         borderBottom: "1px solid #111",
                         display: "flex",
                         alignItems: "center",
                         gap: 12,
+                        cursor: session ? "default" : "pointer",
+                        transition: "background 0.15s ease",
                     }}
+                    onMouseEnter={(e) => { if (!session) e.currentTarget.style.background = "#0d0d0d"; }}
+                    onMouseLeave={(e) => { if (!session) e.currentTarget.style.background = "transparent"; }}
                 >
                     <div
                         style={{
@@ -417,13 +422,14 @@ export default function CommunityPage() {
                             </div>
                         </>
                     ) : (
-                        <div
-                            onClick={handleGoogleLogin}
+                        <a
+                            href="/login"
                             style={{
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 8,
                                 cursor: "pointer",
+                                textDecoration: "none",
                             }}
                         >
                             <div
@@ -446,7 +452,7 @@ export default function CommunityPage() {
                             <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#555" }}>
                                 Sign in
                             </div>
-                        </div>
+                        </a>
                     )}
                 </div>
             </div>
@@ -711,34 +717,49 @@ export default function CommunityPage() {
                             </button>
                         </>
                     ) : (
-                        <button
-                            onClick={handleGoogleLogin}
+                        <div
                             style={{
-                                width: "100%",
-                                height: 48,
-                                background: "linear-gradient(135deg, #FF3B30, #b71c1c)",
-                                border: "none",
-                                borderRadius: 0,
-                                color: "#fff",
-                                fontFamily: "var(--font-syne)",
-                                fontWeight: 800,
-                                fontSize: 14,
-                                letterSpacing: 1,
-                                cursor: "pointer",
+                                flex: 1,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                gap: 10,
-                                transition: "opacity 0.2s ease",
+                                gap: 8,
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                         >
-                            <svg width="18" height="18" viewBox="0 0 48 48">
-                                <path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-                            </svg>
-                            Sign in with Google to Chat
-                        </button>
+                            <div
+                                style={{
+                                    flex: 1,
+                                    background: "#0a0a0a",
+                                    border: "1px solid #1a1a1a",
+                                    padding: "14px 20px",
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: 13,
+                                    color: "#333",
+                                    cursor: "default",
+                                    userSelect: "none",
+                                    opacity: 0.5,
+                                }}
+                            >
+                                Message #{activeChannel}
+                            </div>
+                            <a
+                                href="/login"
+                                style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: 11,
+                                    color: "#FF3B30",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                    textDecoration: "underline",
+                                    textUnderlineOffset: 3,
+                                    transition: "opacity 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                            >
+                                Please log in
+                            </a>
+                        </div>
                     )}
                 </div>
             </div>
