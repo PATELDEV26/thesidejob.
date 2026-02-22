@@ -532,20 +532,16 @@ export default function CommunityPage() {
                                             width: 36,
                                             height: 36,
                                             borderRadius: "50%",
-                                            background: (session && msg.sender === session.user.user_metadata.full_name)
-                                                ? "linear-gradient(135deg, #FF3B30, #7a0000)"
-                                                : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontFamily: "var(--font-syne)",
-                                            fontWeight: 900,
-                                            fontSize: 10,
-                                            color: "#fff",
+                                            overflow: "hidden",
                                             flexShrink: 0,
+                                            background: "#111",
                                         }}
                                     >
-                                        {msg.avatar}
+                                        <img
+                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.sender)}`}
+                                            alt="avatar"
+                                            style={{ width: "100%", height: "100%", borderRadius: "50%" }}
+                                        />
                                     </div>
                                 )}
                                 <div style={{ flex: 1 }}>
