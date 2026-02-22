@@ -13,21 +13,59 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [lastSignUpTime, setLastSignUpTime] = useState(0);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
         setSuccess("");
+
+        if (isSignUp) {
+            // Prevent spamming sign-up (rate limit protection: 60s cooldown)
+            const now = Date.now();
+            if (now - lastSignUpTime < 60000) {
+                const secondsLeft = Math.ceil((60000 - (now - lastSignUpTime)) / 1000);
+                setError(`Please wait ${secondsLeft}s before trying again.`);
+                return;
+            }
+        }
+
         setLoading(true);
 
         try {
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/community`,
+                    },
                 });
-                if (error) throw error;
-                setSuccess("Check your email for a confirmation link, then sign in.");
+                if (error) {
+                    if (error.message.toLowerCase().includes("rate limit")) {
+                        throw new Error("Too many attempts. Please wait a minute and try again.");
+                    }
+                    throw error;
+                }
+
+                setLastSignUpTime(Date.now());
+
+                // If Supabase auto-confirmed (email confirmation disabled in dashboard),
+                // a session is returned — redirect straight to chat
+                if (data.session) {
+                    router.push("/community");
+                    return;
+                }
+
+                // If user already exists but is unconfirmed, data.user will exist but
+                // identities array will be empty
+                if (data.user && data.user.identities && data.user.identities.length === 0) {
+                    setError("An account with this email already exists. Try signing in instead.");
+                    setIsSignUp(false);
+                    return;
+                }
+
+                setSuccess("Account created! Check your email for a confirmation link, then sign in.");
                 setIsSignUp(false);
                 setPassword("");
             } else {
@@ -35,7 +73,18 @@ export default function LoginPage() {
                     email,
                     password,
                 });
-                if (error) throw error;
+                if (error) {
+                    if (error.message === "Invalid login credentials") {
+                        throw new Error("Wrong email or password. If you just signed up, check your email to confirm first.");
+                    }
+                    if (error.message === "Email not confirmed") {
+                        throw new Error("Your email is not confirmed yet. Check your inbox for the confirmation link.");
+                    }
+                    if (error.message.toLowerCase().includes("rate limit")) {
+                        throw new Error("Too many attempts. Please wait a minute and try again.");
+                    }
+                    throw error;
+                }
                 router.push("/community");
             }
         } catch (err: any) {
