@@ -100,6 +100,7 @@ export default function CommunityPage() {
         if (savedName) setUsername(savedName);
     }, []);
 
+    // Load existing messages and setup "Short-Polling" Fallback
     useEffect(() => {
         const fetchExistingMessages = async () => {
             const { data, error } = await supabase
@@ -124,38 +125,19 @@ export default function CommunityPage() {
             if (error) console.error("Fetch error:", error);
         };
 
+        // 1. Fetch immediately on page load
         fetchExistingMessages();
 
-        // 1. Set up Realtime Channel with Status Monitor
-        const channel = supabase
-            .channel("custom-all-channel")
-            .on(
-                "postgres_changes",
-                { event: "INSERT", schema: "public", table: "messages" },
-                (payload) => {
-                    console.log("🔥 INCOMING MESSAGE DETECTED:", payload.new);
-                    const m = payload.new as any;
-                    const newMsg: Message = {
-                        id: m.id,
-                        sender: m.sender_name || "Anonymous",
-                        avatar: getInitials(m.sender_name || "A"),
-                        text: m.content || "",
-                        time: new Date(m.created_at).toLocaleTimeString("en-US", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                        }),
-                    };
-                    setMessages((prev) => [...prev, newMsg]);
-                }
-            )
-            .subscribe((status) => {
-                // THIS WILL TELL US IF THE CONNECTION IS WORKING
-                console.log("📡 Supabase Realtime Status:", status);
-            });
+        // 2. THE BULLETPROOF FIX: Short-Polling
+        // Fetch the database every 2 seconds. This bypasses Kaspersky, strict firewalls, 
+        // and WSS bugs, guaranteeing the chat feels "live" for every single user.
+        const pollInterval = setInterval(() => {
+            fetchExistingMessages();
+        }, 2000);
 
+        // 3. Clean up the interval when leaving the page
         return () => {
-            supabase.removeChannel(channel);
+            clearInterval(pollInterval);
         };
     }, []);
 
@@ -195,6 +177,27 @@ export default function CommunityPage() {
 
         if (error) {
             console.error("Error sending message:", error);
+        } else {
+            // Optional: Instantly fetch right after sending to make it feel even faster
+            const { data } = await supabase
+                .from("messages")
+                .select("*")
+                .order("created_at", { ascending: true });
+
+            if (data) {
+                const formatted = data.map((m: any) => ({
+                    id: m.id,
+                    sender: m.sender_name || "Anonymous",
+                    avatar: getInitials(m.sender_name || "A"),
+                    text: m.content || "",
+                    time: new Date(m.created_at).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                    }),
+                }));
+                setMessages(formatted);
+            }
         }
     };
 
