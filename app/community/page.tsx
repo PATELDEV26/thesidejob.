@@ -25,7 +25,6 @@ interface Message {
     id: string;
     sender: string;
     avatar: string;
-    avatar_style: string;
     text: string;
     time: string;
     reactions?: { emoji: string; count: number }[];
@@ -63,8 +62,6 @@ export default function CommunityPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [onlineCount, setOnlineCount] = useState(0);
-    const [avatarStyles, setAvatarStyles] = useState<Record<string, string>>({});
-    const [myAvatarStyle, setMyAvatarStyle] = useState("avataaars");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,24 +82,13 @@ export default function CommunityPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setOnlineCount(session ? 1 : 0);
-            if (session) fetchMyProfile(session.user.id);
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             setOnlineCount(session ? 1 : 0);
-            if (session) fetchMyProfile(session.user.id);
         });
         return () => subscription.unsubscribe();
     }, []);
-
-    const fetchMyProfile = async (userId: string) => {
-        const { data } = await supabase
-            .from("profiles")
-            .select("avatar_style")
-            .eq("id", userId)
-            .single();
-        if (data?.avatar_style) setMyAvatarStyle(data.avatar_style);
-    };
 
     const handleGoogleLogin = async () => {
         await supabase.auth.signInWithOAuth({ provider: 'google' });
@@ -125,7 +111,6 @@ export default function CommunityPage() {
                     id: m.id,
                     sender: m.sender_name || "Anonymous",
                     avatar: getInitials(m.sender_name || "A"),
-                    avatar_style: m.sender_avatar_style || "avataaars",
                     text: m.content || "",
                     time: new Date(m.created_at).toLocaleTimeString("en-US", {
                         hour: "numeric",
@@ -171,7 +156,6 @@ export default function CommunityPage() {
             {
                 content,
                 sender_name: currentName,
-                sender_avatar_style: myAvatarStyle,
             },
         ]);
 
@@ -189,7 +173,6 @@ export default function CommunityPage() {
                     id: m.id,
                     sender: m.sender_name || "Anonymous",
                     avatar: getInitials(m.sender_name || "A"),
-                    avatar_style: m.sender_avatar_style || "avataaars",
                     text: m.content || "",
                     time: new Date(m.created_at).toLocaleTimeString("en-US", {
                         hour: "numeric",
@@ -349,36 +332,24 @@ export default function CommunityPage() {
                 >
                     {session ? (
                         <>
-                            <Link href="/profile" style={{ textDecoration: "none", flexShrink: 0 }}>
-                                {session.user.user_metadata?.avatar_url ? (
-                                    <img
-                                        src={session.user.user_metadata.avatar_url}
-                                        alt="avatar"
-                                        style={{
-                                            width: 32,
-                                            height: 32,
-                                            borderRadius: "50%",
-                                            objectFit: "cover",
-                                        }}
-                                    />
-                                ) : (
-                                    <div
-                                        style={{
-                                            width: 32,
-                                            height: 32,
-                                            borderRadius: "50%",
-                                            overflow: "hidden",
-                                            background: "#111",
-                                        }}
-                                    >
-                                        <img
-                                            src={`https://api.dicebear.com/9.x/${myAvatarStyle}/svg?seed=${encodeURIComponent(session.user.user_metadata?.full_name || session.user.email || "")}`}
-                                            alt="avatar"
-                                            style={{ width: "100%", height: "100%" }}
-                                        />
-                                    </div>
-                                )}
-                            </Link>
+                            <div
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #FF3B30, #7a0000)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontFamily: "var(--font-syne)",
+                                    fontWeight: 900,
+                                    fontSize: 10,
+                                    color: "#fff",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                            </div>
                             <div style={{ flex: 1, overflow: "hidden" }}>
                                 <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                     {session.user.user_metadata?.full_name || session.user.email}
@@ -547,16 +518,20 @@ export default function CommunityPage() {
                                             width: 36,
                                             height: 36,
                                             borderRadius: "50%",
-                                            overflow: "hidden",
+                                            background: (session && msg.sender === (session.user.user_metadata?.full_name || session.user.email))
+                                                ? "linear-gradient(135deg, #FF3B30, #7a0000)"
+                                                : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            fontFamily: "var(--font-syne)",
+                                            fontWeight: 900,
+                                            fontSize: 10,
+                                            color: "#fff",
                                             flexShrink: 0,
-                                            background: "#111",
                                         }}
                                     >
-                                        <img
-                                            src={`https://api.dicebear.com/9.x/${msg.avatar_style}/svg?seed=${encodeURIComponent(msg.sender)}`}
-                                            alt="avatar"
-                                            style={{ width: "100%", height: "100%", borderRadius: "50%" }}
-                                        />
+                                        {msg.avatar}
                                     </div>
                                 )}
                                 <div style={{ flex: 1 }}>
@@ -848,34 +823,23 @@ export default function CommunityPage() {
                         }}
                     >
                         <div style={{ position: "relative" }}>
-                            {session.user.user_metadata?.avatar_url ? (
-                                <img
-                                    src={session.user.user_metadata.avatar_url}
-                                    alt="avatar"
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: "50%",
-                                        objectFit: "cover",
-                                    }}
-                                />
-                            ) : (
-                                <div
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: "50%",
-                                        overflow: "hidden",
-                                        background: "#111",
-                                    }}
-                                >
-                                    <img
-                                        src={`https://api.dicebear.com/9.x/${myAvatarStyle}/svg?seed=${encodeURIComponent(session.user.user_metadata?.full_name || session.user.email || "")}`}
-                                        alt="avatar"
-                                        style={{ width: "100%", height: "100%" }}
-                                    />
-                                </div>
-                            )}
+                            <div
+                                style={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #FF3B30, #7a0000)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontFamily: "var(--font-syne)",
+                                    fontWeight: 900,
+                                    fontSize: 10,
+                                    color: "#fff",
+                                }}
+                            >
+                                {getInitials(session.user.user_metadata?.full_name || session.user.email || "")}
+                            </div>
                             <div
                                 style={{
                                     position: "absolute",
