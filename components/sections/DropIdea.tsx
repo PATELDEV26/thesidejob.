@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "@/lib/gsap";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMagneticEffect } from "@/hooks/useMagneticEffect";
+import { useAuth } from "@/hooks/useAuth";
+import LoginModal from "@/components/ui/LoginModal";
 
 export default function DropIdea() {
     const sectionRef = useRef<HTMLElement>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLAnchorElement>(null);
+    const router = useRouter();
+    const { user, loading } = useAuth();
+    const [showLogin, setShowLogin] = useState(false);
+
     useMagneticEffect(btnRef, 0.2);
 
     useEffect(() => {
@@ -33,6 +39,17 @@ export default function DropIdea() {
 
         return () => ctx.revert();
     }, []);
+
+    const handleDropIdeaClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (loading) return;
+
+        if (!user) {
+            setShowLogin(true);
+        } else {
+            router.push("/ideas");
+        }
+    };
 
     return (
         <section
@@ -93,9 +110,10 @@ export default function DropIdea() {
                     marginTop: 40,
                 }}
             >
-                <Link
+                <a
                     ref={btnRef}
                     href="/ideas"
+                    onClick={handleDropIdeaClick}
                     className="magnetic"
                     style={{
                         display: "inline-block",
@@ -121,8 +139,18 @@ export default function DropIdea() {
                     }}
                 >
                     DROP YOUR IDEA →
-                </Link>
+                </a>
             </div>
+
+            {showLogin && (
+                <LoginModal
+                    onSuccess={() => {
+                        setShowLogin(false);
+                        router.push("/ideas");
+                    }}
+                    onClose={() => setShowLogin(false)}
+                />
+            )}
 
             <style jsx>{`
                 @media (max-width: 768px) {

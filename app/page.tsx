@@ -6,6 +6,7 @@ import OurWork from "@/components/sections/OurWork";
 import Stats from "@/components/sections/Stats";
 import JoinUs from "@/components/sections/JoinUs";
 import DropIdea from "@/components/sections/DropIdea";
+import AuthSection from "@/components/sections/AuthSection";
 import Footer from "@/components/layout/Footer";
 import FloatingCTA from "@/components/ui/FloatingCTA";
 import SectionIndicator from "@/components/ui/SectionIndicator";
@@ -21,6 +22,7 @@ export default function Home() {
                 <OurWork />
                 <Stats />
                 <DropIdea />
+                <AuthSection />
                 <JoinUs />
             </main>
             <Footer />

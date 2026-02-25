@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import LoginModal from "@/components/ui/LoginModal";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -19,10 +21,17 @@ export default function IdeasPage() {
     const [ideaSubmitting, setIdeaSubmitting] = useState(false);
     const [ideaSuccess, setIdeaSuccess] = useState(false);
 
+    const { user, profile, loading } = useAuth();
+    const [showLogin, setShowLogin] = useState(false);
+
     useEffect(() => {
-        const savedName = localStorage.getItem("charcha_username");
-        if (savedName) setIdeaName(savedName);
-    }, []);
+        if (!loading && !user) {
+            setShowLogin(true);
+        } else if (user) {
+            if (profile?.username) setIdeaName(profile.username);
+            if (user.email) setIdeaEmail(user.email);
+        }
+    }, [user, profile, loading]);
 
     const submitIdea = async () => {
         if (!ideaTitle.trim() || !ideaDesc.trim() || !ideaEmail.trim()) {
@@ -57,6 +66,14 @@ export default function IdeasPage() {
 
     return (
         <div style={{ background: "#000", minHeight: "100vh", position: "relative", zIndex: 1 }}>
+            {/* Show login modal if unauthenticated */}
+            {showLogin && (
+                <LoginModal
+                    onSuccess={() => setShowLogin(false)}
+                    onClose={() => router.push("/")}
+                />
+            )}
+
             {/* Fixed top nav */}
             <nav
                 style={{

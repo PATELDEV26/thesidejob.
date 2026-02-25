@@ -2,11 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import LoginModal from "@/components/ui/LoginModal";
 
 const QUICK_EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "👎", "🎉", "🚀", "💯", "👀", "🤔", "😎", "🙌", "✅", "❌", "💀"];
 
@@ -17,12 +15,12 @@ interface Message {
     text: string;
     time: string;
     channel?: string;
+    room_id?: string;
 }
 
 const SECTIONS = [
     { id: "introduction", label: "#introduction", icon: "👋", desc: "Introduce yourself to the community" },
-    { id: "general", label: "#general", icon: "#", desc: "The main channel for all things Thesidejob" },
-    { id: "members-only", label: "#members-only", icon: "🔒", desc: "Private channel for verified members" },
+    { id: "general", label: "#general", icon: "#", desc: "The main channel for all things Thesidejob" }
 ];
 
 function formatText(text: string, onlineUsers: string[]): React.ReactNode {
@@ -65,24 +63,18 @@ function getNextFridayAndSunday() {
 }
 
 export default function CommunityPage() {
-    const [activeSection, setActiveSection] = useState<string>("introduction");
+    const { user, profile, loading, isAdmin } = useAuth();
+
+    const [activeChannel, setActiveChannel] = useState<string>("introduction");
+    const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+
+    const [privateRooms, setPrivateRooms] = useState<any[]>([]);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
-    const [session, setSession] = useState<any>(null);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
-    // Auth & Identity
-    const [displayName, setDisplayName] = useState("");
-    const [showNamePrompt, setShowNamePrompt] = useState(false);
-    const [nameInput, setNameInput] = useState("");
-
-    // Members only
-    const [memberUnlocked, setMemberUnlocked] = useState(false);
-    const [showPasscodePrompt, setShowPasscodePrompt] = useState(false);
-    const [passcodeInput, setPasscodeInput] = useState("");
-    const [passcodeError, setPasscodeError] = useState("");
-
-    // Layout
+    // Sidebar & Layout
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Mentions & Presence
@@ -90,7 +82,14 @@ export default function CommunityPage() {
     const [mentionFilter, setMentionFilter] = useState("");
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-    // Removed Idea Dropbox state
+    // Private Rooms Creation & Joining
+    const [showCreateRoom, setShowCreateRoom] = useState(false);
+    const [newRoomName, setNewRoomName] = useState("");
+    const [newRoomPasscode, setNewRoomPasscode] = useState("");
+
+    const [roomToJoin, setRoomToJoin] = useState<any>(null);
+    const [joinPasscode, setJoinPasscode] = useState("");
+    const [joinError, setJoinError] = useState("");
 
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -102,76 +101,23 @@ export default function CommunityPage() {
     const getInitials = (name: string) => name ? name.slice(0, 2).toUpperCase() : "??";
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            handleSession(session);
-        });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            handleSession(session);
-        });
-
         const draft = localStorage.getItem("charcha_mention_draft");
         if (draft) {
             setInput(draft);
             localStorage.removeItem("charcha_mention_draft");
         }
-
-        return () => subscription.unsubscribe();
     }, []);
-
-    const handleSession = (sess: any) => {
-        if (!sess) return;
-
-        const savedName = localStorage.getItem("charcha_username");
-        if (savedName) {
-            setDisplayName(savedName);
-        } else {
-            setShowNamePrompt(true);
-        }
-
-        const isAdmin = sess.user.email === "pateldev2317@gmail.com";
-        const unlocked = localStorage.getItem("memberUnlocked") === "true";
-        if (isAdmin || unlocked) {
-            setMemberUnlocked(true);
-        }
-    };
-
-    const handleNameSubmit = async () => {
-        const name = nameInput.trim();
-        if (!name || !session) return;
-
-        localStorage.setItem("charcha_username", name);
-        setDisplayName(name);
-        setShowNamePrompt(false);
-        setNameInput("");
-
-        const { error } = await supabase.from("users").upsert({
-            id: session.user.id,
-            username: name,
-            email: session.user.email
-        }, { onConflict: "id" });
-        if (error) console.error("Error saving user profile:", error);
-    };
-
-    const handleChangeName = () => {
-        localStorage.removeItem("charcha_username");
-        setDisplayName("");
-        setNameInput("");
-        setShowNamePrompt(true);
-    };
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        setDisplayName("");
     };
 
     // Presence
     useEffect(() => {
-        if (!displayName) return;
+        if (!profile?.username) return;
         const updatePresence = async () => {
             await supabase.from("online_users").upsert(
-                { name: displayName, last_seen: new Date().toISOString() },
+                { name: profile.username, last_seen: new Date().toISOString() },
                 { onConflict: "name" }
             ).then(() => { });
 
@@ -182,17 +128,38 @@ export default function CommunityPage() {
         updatePresence();
         const interval = setInterval(updatePresence, 5000);
         return () => clearInterval(interval);
-    }, [displayName]);
+    }, [profile?.username]);
 
-    // Fetch Messages
+    // Fetch Private Rooms & Subscribe
     useEffect(() => {
-        const fetchMessages = async () => {
-            let query = supabase.from("messages").select("*").order("created_at", { ascending: true });
+        const fetchRooms = async () => {
+            const { data } = await supabase.from("private_rooms").select("*").order("created_at", { ascending: true });
+            if (data) setPrivateRooms(data);
+        };
+        fetchRooms();
 
-            if (activeSection === "general") {
-                query = query.or("channel.eq.general,channel.is.null");
+        const roomSub = supabase.channel('rooms')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_rooms' }, (payload) => {
+                setPrivateRooms(prev => [...prev, payload.new]);
+            }).subscribe();
+
+        return () => { supabase.removeChannel(roomSub) };
+    }, []);
+
+    // Fetch Messages & Subscribe
+    useEffect(() => {
+        if (!activeChannel && !activeRoomId) return;
+
+        const fetchMessages = async () => {
+            let query = supabase.from("messages").select("*").order("created_at", { ascending: true }).limit(100);
+
+            if (activeRoomId) {
+                query = query.eq("room_id", activeRoomId);
+            } else if (activeChannel === "general") {
+                // To fetch both 'general' and null channels (legacy), though ideally all have a channel 
+                query = query.or("channel.eq.general,channel.is.null").is("room_id", null);
             } else {
-                query = query.eq("channel", activeSection);
+                query = query.eq("channel", activeChannel).is("room_id", null);
             }
 
             const { data, error } = await query;
@@ -204,49 +171,114 @@ export default function CommunityPage() {
                     text: m.content || "",
                     time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
                     channel: m.channel,
+                    room_id: m.room_id
                 })));
             }
             if (error) console.error("Fetch error:", error);
         };
 
         fetchMessages();
-        const poll = setInterval(fetchMessages, 2000);
-        return () => clearInterval(poll);
-    }, [activeSection]);
+
+        const channelFilter = activeRoomId ? `room_id=eq.${activeRoomId}` : `channel=eq.${activeChannel}`;
+
+        const subChannel = supabase
+            .channel(`messages:${activeRoomId || activeChannel}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: channelFilter
+            }, (payload) => {
+                const m = payload.new as any;
+                setMessages(prev => [...prev, {
+                    id: m.id,
+                    sender: m.sender_name || "Anonymous",
+                    avatar: getInitials(m.sender_name || "A"),
+                    text: m.content || "",
+                    time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+                    channel: m.channel,
+                    room_id: m.room_id
+                }]);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subChannel);
+        };
+    }, [activeChannel, activeRoomId]);
 
     useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-    const handleSectionClick = (id: string) => {
-        if (id === "members-only" && !memberUnlocked) {
-            setShowPasscodePrompt(true);
-            return;
-        }
-        setActiveSection(id);
+    const handleChannelClick = (id: string) => {
+        setActiveChannel(id);
+        setActiveRoomId(null);
         setSidebarOpen(false);
     };
 
-    const handlePasscodeSubmit = () => {
-        if (passcodeInput.trim() === "TSJ2026") {
-            setMemberUnlocked(true);
-            localStorage.setItem("memberUnlocked", "true");
-            setShowPasscodePrompt(false);
-            setPasscodeInput("");
-            setPasscodeError("");
-            setActiveSection("members-only");
+    const handleRoomClick = (room: any) => {
+        if (isAdmin(user?.email)) {
+            setActiveRoomId(room.id);
+            setActiveChannel("");
+            setSidebarOpen(false);
+            return;
+        }
+
+        const unlocked = localStorage.getItem(`room_${room.id}_unlocked`);
+        if (unlocked || room.created_by === profile?.username) {
+            setActiveRoomId(room.id);
+            setActiveChannel("");
             setSidebarOpen(false);
         } else {
-            setPasscodeError("Invalid Passcode.");
+            setRoomToJoin(room);
+            setJoinPasscode("");
+            setJoinError("");
+        }
+    };
+
+    const handleJoinSubmit = () => {
+        if (joinPasscode === roomToJoin.passcode) {
+            localStorage.setItem(`room_${roomToJoin.id}_unlocked`, "true");
+            setActiveRoomId(roomToJoin.id);
+            setActiveChannel("");
+            setSidebarOpen(false);
+            setRoomToJoin(null);
+        } else {
+            setJoinError("Incorrect passcode.");
+        }
+    };
+
+    const handleCreateRoom = async () => {
+        if (!newRoomName.trim() || !newRoomPasscode.trim() || !profile) return;
+        const { error } = await supabase.from("private_rooms").insert([{
+            name: newRoomName.trim(),
+            passcode: newRoomPasscode.trim(),
+            created_by: profile.username
+        }]);
+        if (!error) {
+            setShowCreateRoom(false);
+            setNewRoomName("");
+            setNewRoomPasscode("");
         }
     };
 
     const sendMessage = async () => {
-        if (!input.trim() || !session || !displayName) return;
+        if (!input.trim() || !user || !profile?.username) return;
         const content = input.trim();
         setInput("");
         setEmojiPickerOpen(false);
         setShowMentions(false);
 
-        const insertData: any = { content, sender_name: displayName, channel: activeSection };
+        const insertData: any = {
+            content,
+            sender_name: profile.username
+        };
+
+        if (activeRoomId) {
+            insertData.room_id = activeRoomId;
+        } else {
+            insertData.channel = activeChannel;
+        }
+
         const { error } = await supabase.from("messages").insert([insertData]);
         if (error) console.error("Error sending:", error);
     };
@@ -287,60 +319,40 @@ export default function CommunityPage() {
         }
     };
 
-
+    const requireAuth = !loading && (!user || !profile);
+    const displayName = profile?.username;
     const filteredMentionUsers = onlineUsers.filter(u => u !== displayName).filter(u => !mentionFilter || u.toLowerCase().includes(mentionFilter));
-    const activeSectionData = SECTIONS.find(s => s.id === activeSection);
-    const isAdmin = session?.user?.email === "pateldev2317@gmail.com";
+
+    let activeName = "";
+    let activeIcon = "";
+    let activeDesc = "";
+    if (activeRoomId) {
+        const r = privateRooms.find(r => r.id === activeRoomId);
+        activeName = r ? r.name : "";
+        activeIcon = "🔒";
+        activeDesc = r ? `Private room by ${r.created_by}` : "";
+    } else {
+        const s = SECTIONS.find(s => s.id === activeChannel);
+        activeName = s ? s.label : "";
+        activeIcon = s ? s.icon : "";
+        activeDesc = s ? s.desc : "";
+    }
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#000", overflow: "hidden", position: "relative" }}>
-            {/* NAME PROMPT */}
-            {showNamePrompt && session && (
-                <div style={{
-                    position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", zIndex: 9999,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                    <div style={{
-                        background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 16, padding: "40px 36px", width: 380, textAlign: "center",
-                    }}>
-                        <div style={{
-                            width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #FF3B30, #7a0000)",
-                            display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
-                            fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 20, color: "#fff",
-                        }}>{nameInput.trim() ? getInitials(nameInput.trim()) : "?"}</div>
-                        <h2 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 22, color: "#fff", marginBottom: 8 }}>
-                            What should we call you?
-                        </h2>
-                        <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", marginBottom: 24 }}>
-                            Enter your display name for the chat
-                        </p>
-                        <input
-                            autoFocus value={nameInput} onChange={(e) => setNameInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") handleNameSubmit(); }}
-                            placeholder="Your name..." maxLength={30}
-                            style={{
-                                width: "100%", padding: "14px 16px", background: "#111", border: "1px solid #222",
-                                borderRadius: 10, color: "#fff", fontFamily: "var(--font-syne)", fontSize: 15, fontWeight: 600,
-                                outline: "none", marginBottom: 16, boxSizing: "border-box",
-                            }}
-                            onFocus={(e) => (e.target.style.borderColor = "#FF3B30")}
-                            onBlur={(e) => (e.target.style.borderColor = "#222")}
-                        />
-                        <button onClick={handleNameSubmit} disabled={!nameInput.trim()}
-                            style={{
-                                width: "100%", padding: "14px 0",
-                                background: nameInput.trim() ? "linear-gradient(135deg, #FF3B30, #7a0000)" : "#1a1a1a",
-                                border: "none", borderRadius: 10, color: nameInput.trim() ? "#fff" : "#444",
-                                fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 14,
-                                cursor: nameInput.trim() ? "pointer" : "not-allowed",
-                            }}
-                        >JOIN CHARCHA</button>
-                    </div>
-                </div>
+
+            {/* LOGIN MODAL */}
+            {requireAuth && (
+                <LoginModal
+                    onSuccess={() => { }}
+                    onClose={() => {
+                        if (!user || !profile) window.location.href = "/";
+                    }}
+                />
             )}
 
-            {/* PASSCODE PROMPT */}
-            {showPasscodePrompt && (
+            {/* JOIN ROOM PROMPT */}
+            {roomToJoin && (
                 <div style={{
                     position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", zIndex: 9999,
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -350,45 +362,43 @@ export default function CommunityPage() {
                     }}>
                         <div style={{ fontSize: 32, marginBottom: 16 }}>🔒</div>
                         <h2 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 20, color: "#fff", marginBottom: 6 }}>
-                            Members Only
+                            {roomToJoin.name}
                         </h2>
                         <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#555", marginBottom: 24 }}>
-                            Enter the passcode to verify membership
+                            Enter the passcode to join this private room
                         </p>
-                        <input value={passcodeInput} onChange={(e) => { setPasscodeInput(e.target.value); setPasscodeError(""); }}
-                            onKeyDown={(e) => { if (e.key === "Enter") handlePasscodeSubmit(); }}
+                        <input value={joinPasscode} onChange={(e) => { setJoinPasscode(e.target.value); setJoinError(""); }}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleJoinSubmit(); }}
                             placeholder="Passcode..." type="password" autoFocus
                             style={{
-                                width: "100%", padding: "12px 16px", background: "#111", border: `1px solid ${passcodeError ? "#FF3B30" : "#222"}`,
+                                width: "100%", padding: "12px 16px", background: "#111", border: `1px solid ${joinError ? "#FF3B30" : "#222"}`,
                                 borderRadius: 8, color: "#fff", fontFamily: "var(--font-mono)", fontSize: 14, outline: "none",
-                                marginBottom: passcodeError ? 8 : 20, boxSizing: "border-box", letterSpacing: 2, textAlign: "center",
+                                marginBottom: joinError ? 8 : 20, boxSizing: "border-box", letterSpacing: 2, textAlign: "center",
                             }}
                         />
-                        {passcodeError && (
+                        {joinError && (
                             <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#FF3B30", marginBottom: 16 }}>
-                                {passcodeError}
+                                {joinError}
                             </p>
                         )}
                         <div style={{ display: "flex", gap: 10 }}>
-                            <button onClick={() => { setShowPasscodePrompt(false); setPasscodeInput(""); setPasscodeError(""); }}
+                            <button onClick={() => setRoomToJoin(null)}
                                 style={{
                                     flex: 1, padding: "12px 0", background: "#111", border: "1px solid #222", borderRadius: 8, color: "#888",
                                     fontFamily: "var(--font-mono)", fontSize: 12, cursor: "pointer",
                                 }}
                             >Cancel</button>
-                            <button onClick={handlePasscodeSubmit} disabled={!passcodeInput.trim()}
+                            <button onClick={handleJoinSubmit} disabled={!joinPasscode.trim()}
                                 style={{
-                                    flex: 1, padding: "12px 0", background: passcodeInput.trim() ? "linear-gradient(135deg, #FF3B30, #7a0000)" : "#1a1a1a",
-                                    border: "none", borderRadius: 8, color: passcodeInput.trim() ? "#fff" : "#444", fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 12,
-                                    cursor: passcodeInput.trim() ? "pointer" : "not-allowed",
+                                    flex: 1, padding: "12px 0", background: joinPasscode.trim() ? "linear-gradient(135deg, #FF3B30, #7a0000)" : "#1a1a1a",
+                                    border: "none", borderRadius: 8, color: joinPasscode.trim() ? "#fff" : "#444", fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 12,
+                                    cursor: joinPasscode.trim() ? "pointer" : "not-allowed",
                                 }}
-                            >SUBMIT</button>
+                            >JOIN ROOM</button>
                         </div>
                     </div>
                 </div>
             )}
-
-
 
             {/* Mobile overlay */}
             {sidebarOpen && (
@@ -431,27 +441,98 @@ export default function CommunityPage() {
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 3, color: "#333", textTransform: "uppercase", marginBottom: 12 }}>CHANNELS</div>
 
                     {SECTIONS.map((sec) => (
-                        <div key={sec.id} onClick={() => handleSectionClick(sec.id)}
+                        <div key={sec.id} onClick={() => handleChannelClick(sec.id)}
                             style={{
                                 padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                                background: activeSection === sec.id ? "#111" : "transparent",
+                                background: activeChannel === sec.id && !activeRoomId ? "#111" : "transparent",
                                 borderRadius: 6, margin: "2px 0",
-                                borderLeft: activeSection === sec.id ? "2px solid #FF3B30" : "2px solid transparent",
-                                color: activeSection === sec.id ? "#fff" : "#555",
+                                borderLeft: activeChannel === sec.id && !activeRoomId ? "2px solid #FF3B30" : "2px solid transparent",
+                                color: activeChannel === sec.id && !activeRoomId ? "#fff" : "#555",
                                 fontFamily: "var(--font-mono)", fontSize: 13, transition: "all 0.15s ease",
                             }}
-                            onMouseEnter={(e) => { if (activeSection !== sec.id) { e.currentTarget.style.background = "#0d0d0d"; e.currentTarget.style.color = "#888"; } }}
-                            onMouseLeave={(e) => { if (activeSection !== sec.id) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#555"; } }}
+                            onMouseEnter={(e) => { if (!(activeChannel === sec.id && !activeRoomId)) { e.currentTarget.style.background = "#0d0d0d"; e.currentTarget.style.color = "#888"; } }}
+                            onMouseLeave={(e) => { if (!(activeChannel === sec.id && !activeRoomId)) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#555"; } }}
                         >
                             <span style={{ fontSize: 14 }}>{sec.icon}</span>
                             {sec.label}
                         </div>
                     ))}
 
+                    {/* PRIVATE ROOMS */}
+                    <div style={{
+                        fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 3,
+                        color: "#333", textTransform: "uppercase", marginTop: 24, marginBottom: 12
+                    }}>
+                        PRIVATE ROOMS
+                    </div>
 
+                    {privateRooms.map((room) => (
+                        <div key={room.id} onClick={() => handleRoomClick(room)}
+                            style={{
+                                padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                                background: activeRoomId === room.id ? "#111" : "transparent",
+                                borderRadius: 6, margin: "2px 0",
+                                borderLeft: activeRoomId === room.id ? "2px solid #FF3B30" : "2px solid transparent",
+                                color: activeRoomId === room.id ? "#fff" : "#555",
+                                fontFamily: "var(--font-mono)", fontSize: 13, transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => { if (activeRoomId !== room.id) { e.currentTarget.style.background = "#0d0d0d"; e.currentTarget.style.color = "#888"; } }}
+                            onMouseLeave={(e) => { if (activeRoomId !== room.id) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#555"; } }}
+                        >
+                            <span style={{ fontSize: 14 }}>🔒</span>
+                            {room.name}
+                        </div>
+                    ))}
 
-                    {isAdmin && (
-                        <div style={{ marginTop: 20 }}>
+                    <button
+                        onClick={() => setShowCreateRoom(!showCreateRoom)}
+                        style={{
+                            fontFamily: "var(--font-mono)", fontSize: 11, color: "#FF3B30", border: "1px solid #1a1a1a",
+                            padding: "8px 16px", background: "transparent", cursor: "pointer", borderRadius: 6,
+                            marginTop: 8, width: "100%", transition: "border-color 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#FF3B30"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#1a1a1a"}
+                    >
+                        + Create Room
+                    </button>
+
+                    {showCreateRoom && (
+                        <div style={{ marginTop: 8, padding: 12, background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 6 }}>
+                            <input
+                                value={newRoomName} onChange={e => setNewRoomName(e.target.value)}
+                                placeholder="my-secret-room"
+                                style={{
+                                    width: "100%", padding: "8px", background: "#111", border: "1px solid #222",
+                                    color: "#fff", fontFamily: "var(--font-mono)", fontSize: 11, marginBottom: 8,
+                                    outline: "none", boxSizing: "border-box"
+                                }}
+                            />
+                            <input
+                                value={newRoomPasscode} onChange={e => setNewRoomPasscode(e.target.value)}
+                                placeholder="choose a code" type="password"
+                                style={{
+                                    width: "100%", padding: "8px", background: "#111", border: "1px solid #222",
+                                    color: "#fff", fontFamily: "var(--font-mono)", fontSize: 11, marginBottom: 8,
+                                    outline: "none", boxSizing: "border-box"
+                                }}
+                            />
+                            <button
+                                onClick={handleCreateRoom}
+                                disabled={!newRoomName.trim() || !newRoomPasscode.trim()}
+                                style={{
+                                    width: "100%", padding: "8px", background: "#FF3B30", border: "none",
+                                    color: "#000", fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 11,
+                                    cursor: "pointer", borderRadius: 4, opacity: (!newRoomName.trim() || !newRoomPasscode.trim()) ? 0.5 : 1
+                                }}
+                            >
+                                Submit
+                            </button>
+                        </div>
+                    )}
+
+                    {isAdmin(user?.email) && (
+                        <div style={{ marginTop: 24, borderTop: "1px solid #111", paddingTop: 16 }}>
                             <Link href="/admin/ideas" style={{
                                 fontFamily: "var(--font-mono)", fontSize: 11, color: "#333", textDecoration: "none",
                                 display: "block", textAlign: "center", padding: "8px"
@@ -465,32 +546,21 @@ export default function CommunityPage() {
 
                 {/* Bottom user */}
                 <div style={{ padding: "16px 20px", borderTop: "1px solid #111", display: "flex", alignItems: "center", gap: 12 }}>
-                    {session && displayName ? (
+                    {user && profile?.username ? (
                         <>
                             <div style={{
                                 width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #FF3B30, #7a0000)",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 10, color: "#fff", flexShrink: 0,
-                            }}>{getInitials(displayName)}</div>
+                            }}>{getInitials(profile.username)}</div>
                             <div style={{ flex: 1, overflow: "hidden" }}>
-                                <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</div>
-                                <div onClick={handleChangeName} style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#555", cursor: "pointer", marginTop: 2 }}>
-                                    Not you? Change name
-                                </div>
+                                <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.username}</div>
                             </div>
                             <div onClick={handleLogout} style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#555", cursor: "pointer" }}
                                 onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
                                 onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                             >Log out</div>
                         </>
-                    ) : (
-                        <a href="/login" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-                            <div style={{
-                                width: 32, height: 32, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center",
-                                fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 10, color: "#555",
-                            }}>??</div>
-                            <div style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#555" }}>Sign in</div>
-                        </a>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
@@ -508,13 +578,13 @@ export default function CommunityPage() {
                         </svg>
                     </button>
 
-                    <span style={{ fontSize: 18 }}>{activeSectionData?.icon}</span>
+                    <span style={{ fontSize: 18 }}>{activeIcon}</span>
                     <span style={{ fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 16, color: "#fff" }}>
-                        {activeSectionData?.label}
+                        {activeName}
                     </span>
                     <div className="header-divider" style={{ width: 1, height: 20, background: "#222", marginLeft: 8 }} />
                     <span className="channel-desc" style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#444" }}>
-                        {activeSectionData?.desc}
+                        {activeDesc}
                     </span>
 
                     <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
@@ -571,67 +641,58 @@ export default function CommunityPage() {
                 </div>
 
                 <div style={{ height: 80, background: "#050505", borderTop: "1px solid #111", padding: "0 32px", display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
-                    {session && displayName ? (
-                        <>
-                            <div style={{ position: "relative", flex: 1 }}>
-                                <input ref={inputRef} type="text" value={input}
-                                    onChange={handleInputChange} onKeyDown={handleKeyDown}
-                                    placeholder={`Message ${activeSectionData?.label} — type @ to mention`}
-                                    style={{
-                                        width: "100%", background: "#111", border: "1px solid #1a1a1a", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, padding: "14px 20px", outline: "none", boxSizing: "border-box",
-                                    }}
-                                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,59,48,0.4)")}
-                                    onBlur={(e) => (e.currentTarget.style.borderColor = "#1a1a1a")}
-                                />
-                                {showMentions && filteredMentionUsers.length > 0 && (
-                                    <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, background: "#0d0d0d", border: "1px solid #1e1e1e", borderBottom: "none", maxHeight: 200, overflowY: "auto", zIndex: 50 }}>
-                                        {filteredMentionUsers.map(u => (
-                                            <div key={u} onClick={() => insertMention(u)} style={{ padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "background 0.1s ease" }}
-                                                onMouseEnter={(e) => (e.currentTarget.style.background = "#111")}
-                                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                            >
-                                                <div style={{ width: 24, height: 24, borderRadius: "50%", background: `linear-gradient(135deg, #${Math.abs(u.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 8, color: "#fff" }}>{getInitials(u)}</div>
-                                                <span style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>{u}</span>
-                                            </div>
-                                        ))}
+                    <div style={{ position: "relative", flex: 1 }}>
+                        <input ref={inputRef} type="text" value={input}
+                            onChange={handleInputChange} onKeyDown={handleKeyDown}
+                            placeholder={`Message ${activeName} — type @ to mention`}
+                            style={{
+                                width: "100%", background: "#111", border: "1px solid #1a1a1a", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, padding: "14px 20px", outline: "none", boxSizing: "border-box",
+                            }}
+                            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,59,48,0.4)")}
+                            onBlur={(e) => (e.currentTarget.style.borderColor = "#1a1a1a")}
+                        />
+                        {showMentions && filteredMentionUsers.length > 0 && (
+                            <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, background: "#0d0d0d", border: "1px solid #1e1e1e", borderBottom: "none", maxHeight: 200, overflowY: "auto", zIndex: 50 }}>
+                                {filteredMentionUsers.map(u => (
+                                    <div key={u} onClick={() => insertMention(u)} style={{ padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "background 0.1s ease" }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#111")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                    >
+                                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: `linear-gradient(135deg, #${Math.abs(u.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 8, color: "#fff" }}>{getInitials(u)}</div>
+                                        <span style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#fff" }}>{u}</span>
                                     </div>
-                                )}
+                                ))}
                             </div>
-                            <div style={{ position: "relative" }}>
-                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: emojiPickerOpen ? "#FF3B30" : "#333", cursor: "pointer" }}
-                                    onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
-                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
-                                    onMouseLeave={(e) => { if (!emojiPickerOpen) e.currentTarget.style.color = "#333"; }}
-                                >
-                                    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-                                    <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                    <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
-                                    <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
-                                </svg>
-                                {emojiPickerOpen && (
-                                    <div style={{ position: "absolute", bottom: 36, right: 0, background: "#0d0d0d", border: "1px solid #1e1e1e", padding: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, zIndex: 50, width: 200 }}>
-                                        {QUICK_EMOJIS.map((emoji) => (
-                                            <button key={emoji} onClick={() => { setInput(prev => prev + emoji); setEmojiPickerOpen(false); inputRef.current?.focus(); }} style={{ background: "transparent", border: "1px solid transparent", fontSize: 20, cursor: "pointer", padding: "6px", borderRadius: 4 }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.borderColor = "#333"; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; }}
-                                            >{emoji}</button>
-                                        ))}
-                                    </div>
-                                )}
+                        )}
+                    </div>
+                    <div style={{ position: "relative" }}>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: emojiPickerOpen ? "#FF3B30" : "#333", cursor: "pointer" }}
+                            onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                            onMouseLeave={(e) => { if (!emojiPickerOpen) e.currentTarget.style.color = "#333"; }}
+                        >
+                            <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+                            <path d="M7 12s1 2 3 2 3-2 3-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="7.5" cy="8.5" r="0.5" fill="currentColor" />
+                            <circle cx="12.5" cy="8.5" r="0.5" fill="currentColor" />
+                        </svg>
+                        {emojiPickerOpen && (
+                            <div style={{ position: "absolute", bottom: 36, right: 0, background: "#0d0d0d", border: "1px solid #1e1e1e", padding: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, zIndex: 50, width: 200 }}>
+                                {QUICK_EMOJIS.map((emoji) => (
+                                    <button key={emoji} onClick={() => { setInput(prev => prev + emoji); setEmojiPickerOpen(false); inputRef.current?.focus(); }} style={{ background: "transparent", border: "1px solid transparent", fontSize: 20, cursor: "pointer", padding: "6px", borderRadius: 4 }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.borderColor = "#333"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; }}
+                                    >{emoji}</button>
+                                ))}
                             </div>
-                            <button onClick={sendMessage} style={{ width: 36, height: 36, background: input.trim() ? "#FF3B30" : "#111", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: input.trim() ? "pointer" : "default" }}>
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M14 2L7 9" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" />
-                                    <path d="M14 2L9.5 14.5L7 9L1.5 6.5L14 2Z" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </button>
-                        </>
-                    ) : (
-                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                            <div style={{ flex: 1, background: "#0a0a0a", border: "1px solid #1a1a1a", padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#333", opacity: 0.5 }}>Message {activeSectionData?.label}</div>
-                            <a href="/login" style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#FF3B30", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>Please log in</a>
-                        </div>
-                    )}
+                        )}
+                    </div>
+                    <button onClick={sendMessage} style={{ width: 36, height: 36, background: input.trim() ? "#FF3B30" : "#111", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: input.trim() ? "pointer" : "default" }}>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M14 2L7 9" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" />
+                            <path d="M14 2L9.5 14.5L7 9L1.5 6.5L14 2Z" stroke={input.trim() ? "#000" : "#333"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 

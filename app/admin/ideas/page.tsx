@@ -109,7 +109,14 @@ export default function AdminIdeaBoard() {
     useEffect(() => {
         const checkAdminAndFetch = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user?.email !== "pateldev2317@gmail.com") {
+            const adminEmails = [
+                'pateldev2317@gmail.com',
+                'girishguptaaditya@gmail.com',
+                'pateldhairya64@gmail.com',
+                'vaka2182003@gmail.com'
+            ];
+
+            if (!session?.user || !adminEmails.includes(session.user.email || "")) {
                 router.push("/community");
                 return;
             }
