@@ -21,22 +21,6 @@ const PROJECTS = [
         desc: "A groundbreaking hybrid space where India's top developers converge to build, collaborate, and push boundaries.",
         status: "In Development" as const,
     },
-    {
-        monogram: "NX",
-        thumbBg: "#1a1a1f",
-        tags: "REACT · PYTHON · ML",
-        name: "NexusAI",
-        desc: "An intelligent study companion for engineering students that adapts to learning patterns and predicts exam performance.",
-        status: "In Development" as const,
-    },
-    {
-        monogram: "MX",
-        thumbBg: "#1f1f1a",
-        tags: "REACT NATIVE · FIREBASE · MAPS",
-        name: "MarketX",
-        desc: "A hyperlocal student marketplace connecting buyers and sellers within university campuses across Gujarat.",
-        status: "Live" as const,
-    },
 ];
 
 function ProjectCard({ project, index }: { project: typeof PROJECTS[0]; index: number }) {

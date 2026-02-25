@@ -20,6 +20,7 @@ const SECTIONS = [
     { id: "services", label: "Services" },
     { id: "work", label: "Work" },
     { id: "manifesto", label: "Manifesto" },
+    { id: "drop-idea", label: "Ideas" },
     { id: "contact", label: "Contact" },
 ];
 

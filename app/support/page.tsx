@@ -29,19 +29,34 @@ const TIERS = [
 
 export default function SupportPage() {
     const [customAmount, setCustomAmount] = useState("");
-    const [showModal, setShowModal] = useState(false);
+    const [showQR, setShowQR] = useState(false);
     const [selectedAmount, setSelectedAmount] = useState(0);
     const [copied, setCopied] = useState(false);
 
-    const handlePay = (amount: number) => {
-        setSelectedAmount(amount);
-        const upiLink = `upi://pay?pa=thesidejob@upi&pn=Thesidejob&am=${amount}&cu=INR&tn=Supporting+Thesidejob+Hacker+House`;
-        window.open(upiLink, "_blank");
-        setShowModal(true);
+    const handlePayment = (amount: number) => {
+        const upiId = '7043338711@ybl'; // replace with your actual UPI ID
+        const name = 'Thesidejob';
+        const note = 'Supporting+Thesidejob+Hacker+House';
+
+        // UPI deep link — opens GPay/PhonePe/Paytm directly
+        const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${note}`;
+
+        // Intent links for specific apps as fallback
+        const gPayLink = `tez://upi/pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${note}`;
+        const phonePeLink = `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${note}`;
+
+        // Try opening UPI deep link
+        window.location.href = upiLink;
+
+        // After 1.5s if app didn't open, show QR modal fallback
+        setTimeout(() => {
+            setShowQR(true);
+            setSelectedAmount(amount);
+        }, 1500);
     };
 
     const handleCopy = () => {
-        navigator.clipboard.writeText("thesidejob@upi");
+        navigator.clipboard.writeText("7043338711@ybl");
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -49,7 +64,7 @@ export default function SupportPage() {
     const handleCustomSend = () => {
         const amt = parseInt(customAmount);
         if (amt && amt >= 1) {
-            handlePay(amt);
+            handlePayment(amt);
         }
     };
 
@@ -68,6 +83,12 @@ export default function SupportPage() {
         transition: "background 0.2s ease",
         flexShrink: 0,
     };
+
+    const upiIdForQr = "7043338711@ybl";
+    const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=upi://pay?pa=${upiIdForQr}%26pn=Thesidejob%26am=${selectedAmount}%26cu=INR`;
+    const gPayLink = `tez://upi/pay?pa=${upiIdForQr}&pn=Thesidejob&am=${selectedAmount}&cu=INR&tn=Supporting+Thesidejob+Hacker+House`;
+    const phonePeLink = `phonepe://pay?pa=${upiIdForQr}&pn=Thesidejob&am=${selectedAmount}&cu=INR&tn=Supporting+Thesidejob+Hacker+House`;
+    const paytmLink = `paytmmp://pay?pa=${upiIdForQr}&pn=Thesidejob&am=${selectedAmount}&cu=INR&tn=Supporting+Thesidejob+Hacker+House`;
 
     return (
         <div style={{ background: "#000", minHeight: "100vh" }}>
@@ -254,7 +275,7 @@ export default function SupportPage() {
                                 </span>
                                 <button
                                     style={buttonStyle}
-                                    onClick={() => handlePay(tier.amount)}
+                                    onClick={() => handlePayment(tier.amount)}
                                     onMouseEnter={(e) =>
                                         (e.currentTarget.style.background = "#e0332a")
                                     }
@@ -497,77 +518,92 @@ export default function SupportPage() {
             </div>
 
             {/* Payment Modal */}
-            {showModal && (
+            {showQR && (
                 <div
                     style={{
                         position: "fixed",
                         inset: 0,
-                        background: "rgba(0,0,0,0.9)",
+                        background: "rgba(0,0,0,0.95)",
                         zIndex: 1000,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                     }}
-                    onClick={() => setShowModal(false)}
                 >
                     <div
                         style={{
                             background: "#0a0a0a",
-                            border: "1px solid #1e1e1e",
+                            border: "1px solid #1a1a1a",
                             padding: 48,
                             maxWidth: 400,
                             width: "90%",
                             textAlign: "center",
+                            position: "relative",
                         }}
-                        onClick={(e) => e.stopPropagation()}
                     >
-                        <div
+                        <button
+                            onClick={() => setShowQR(false)}
                             style={{
-                                fontFamily: "var(--font-syne)",
-                                fontWeight: 900,
-                                fontSize: 24,
-                                color: "#fff",
-                            }}
-                        >
-                            Payment Initiated
-                        </div>
-                        <div
-                            style={{
+                                position: "absolute",
+                                top: 16,
+                                right: 16,
                                 fontFamily: "var(--font-mono)",
                                 fontSize: 12,
-                                color: "#555",
-                                marginTop: 12,
-                                marginBottom: 32,
+                                color: "#333",
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                transition: "color 0.2s",
                             }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
                         >
-                            If your UPI app didn&apos;t open automatically, use the
-                            details below:
-                        </div>
+                            ✕ Close
+                        </button>
+
                         <div
                             style={{
-                                background: "#111",
-                                border: "1px solid #1a1a1a",
-                                padding: 16,
                                 fontFamily: "var(--font-mono)",
-                                fontSize: 14,
+                                fontSize: 11,
                                 color: "#FF3B30",
-                                letterSpacing: 2,
-                                textAlign: "center",
+                                letterSpacing: 4,
+                                marginBottom: 16,
                             }}
                         >
-                            thesidejob@upi
+                            // Scan to Pay
                         </div>
+
                         <div
                             style={{
                                 fontFamily: "var(--font-syne)",
                                 fontWeight: 900,
-                                fontSize: 48,
+                                fontSize: 64,
                                 color: "#fff",
-                                marginTop: 16,
+                                marginBottom: 24,
                             }}
                         >
                             ₹{selectedAmount}
                         </div>
+
+                        <img
+                            src={qrUrl}
+                            alt="UPI QR Code"
+                            width={200}
+                            height={200}
+                            style={{ border: "8px solid white", marginBottom: 16 }}
+                        />
+
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555" }}>
+                            Scan with GPay, PhonePe, Paytm or any UPI app
+                        </div>
+
+                        <div style={{
+                            background: "#111", padding: 16, marginTop: 24,
+                            fontFamily: "var(--font-mono)", fontSize: 14, color: "#FF3B30", letterSpacing: 2
+                        }}>
+                            {upiIdForQr}
+                        </div>
+
                         <button
                             onClick={handleCopy}
                             style={{
@@ -578,47 +614,48 @@ export default function SupportPage() {
                                 padding: "12px 24px",
                                 background: "transparent",
                                 cursor: "pointer",
-                                marginTop: 24,
+                                marginTop: 16,
                                 transition: "all 0.3s ease",
-                                borderColor: copied ? "#32D74B" : "#333",
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!copied) {
-                                    e.currentTarget.style.borderColor = "#FF3B30";
-                                    e.currentTarget.style.color = "#FF3B30";
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!copied) {
-                                    e.currentTarget.style.borderColor = "#333";
-                                    e.currentTarget.style.color = "#555";
-                                }
                             }}
                         >
                             {copied ? "Copied ✓" : "Copy UPI ID"}
                         </button>
-                        <div>
-                            <button
-                                onClick={() => setShowModal(false)}
-                                style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: 11,
-                                    color: "#333",
-                                    background: "transparent",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    marginTop: 16,
-                                    transition: "color 0.3s ease",
-                                }}
-                                onMouseEnter={(e) =>
-                                    (e.currentTarget.style.color = "#fff")
-                                }
-                                onMouseLeave={(e) =>
-                                    (e.currentTarget.style.color = "#333")
-                                }
+
+                        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 24 }}>
+                            <a href={gPayLink} style={{
+                                fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 2,
+                                border: "1px solid #222", color: "#444", padding: "10px 16px", textDecoration: "none",
+                                transition: "all 0.2s"
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#FF3B30"; e.currentTarget.style.color = "#FF3B30"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#222"; e.currentTarget.style.color = "#444"; }}
                             >
-                                Close
-                            </button>
+                                Open GPay
+                            </a>
+                            <a href={phonePeLink} style={{
+                                fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 2,
+                                border: "1px solid #222", color: "#444", padding: "10px 16px", textDecoration: "none",
+                                transition: "all 0.2s"
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#FF3B30"; e.currentTarget.style.color = "#FF3B30"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#222"; e.currentTarget.style.color = "#444"; }}
+                            >
+                                Open PhonePe
+                            </a>
+                            <a href={paytmLink} style={{
+                                fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 2,
+                                border: "1px solid #222", color: "#444", padding: "10px 16px", textDecoration: "none",
+                                transition: "all 0.2s"
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#FF3B30"; e.currentTarget.style.color = "#FF3B30"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#222"; e.currentTarget.style.color = "#444"; }}
+                            >
+                                Open Paytm
+                            </a>
+                        </div>
+
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#333", marginTop: 24 }}>
+                            After paying, screenshot and share on Charcha #general — we'll shout you out 🔴
                         </div>
                     </div>
                 </div>

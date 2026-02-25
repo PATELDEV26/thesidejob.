@@ -182,6 +182,7 @@ function Footer() {
                             { label: "Services", href: "#services" },
                             { label: "Work", href: "#work" },
                             { label: "About", href: "#about" },
+                            { label: "Ideas", href: "#drop-idea" },
                             { label: "Contact", href: "#contact" },
                             { label: "Support", href: "/support" },
                         ].map(({ label, href }) => (
