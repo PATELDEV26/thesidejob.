@@ -10,37 +10,28 @@ const NAV_LINKS = [
     { label: "SERVICES", href: "#services" },
     { label: "WORK", href: "#work" },
     { label: "ABOUT", href: "#about" },
+    { label: "IDEAS", href: "#drop-idea" },
     { label: "CONTACT", href: "#contact" },
 ];
 
-function NavLink({ label, href, onClick }: { label: string; href: string; onClick?: () => void }) {
+function NavLink({ label, href, activeId, onClick }: { label: string; href: string; activeId?: string; onClick?: () => void }) {
     const ref = useRef<HTMLAnchorElement>(null);
     useMagneticEffect(ref, 0.2);
+    const isActive = activeId === href.replace('#', '');
     return (
         <a
             ref={ref}
             href={href}
-            className="nav-link magnetic"
+            className={`nav-link magnetic ${isActive ? "active" : ""}`}
             onClick={onClick}
-            style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 10,
-                letterSpacing: 3,
-                color: "#555",
-                textDecoration: "none",
-                textTransform: "uppercase",
-                transition: "color 0.3s ease",
-                padding: "8px 4px",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+            data-text={label}
         >
             {label}
         </a>
     );
 }
 
-function CharchaLink({ onClick }: { onClick?: () => void }) {
+function CharchaLink({ onClick, isActive }: { onClick?: () => void, isActive?: boolean }) {
     const ref = useRef<HTMLDivElement>(null);
     const router = useRouter();
     useMagneticEffect(ref, 0.2);
@@ -58,30 +49,16 @@ function CharchaLink({ onClick }: { onClick?: () => void }) {
     return (
         <div
             ref={ref}
-            className="nav-link magnetic"
+            className={`nav-link magnetic ${isActive ? "active" : ""}`}
             onClick={handleCharchaClick}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === "Enter") handleCharchaClick(); }}
             style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 10,
-                letterSpacing: 3,
-                color: "#555",
-                textDecoration: "none",
-                textTransform: "uppercase",
-                transition: "color 0.3s ease",
-                padding: "8px 4px",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
                 cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#fff";
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#555";
             }}
         >
             <span
@@ -101,13 +78,39 @@ function CharchaLink({ onClick }: { onClick?: () => void }) {
 function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [activeId, setActiveId] = useState("");
     const pathname = usePathname();
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 100);
+
+            const sections = NAV_LINKS.map(link => document.getElementById(link.href.replace('#', ''))).filter(Boolean) as HTMLElement[];
+            if (sections.length === 0) return;
+
+            let currentActive = "";
+            let minDistance = Infinity;
+            const viewportCenter = window.innerHeight / 2;
+
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                const distance = Math.abs(rect.top - viewportCenter);
+
+                if (rect.top <= viewportCenter && rect.bottom >= viewportCenter) {
+                    currentActive = section.id;
+                    minDistance = 0;
+                } else if (distance < minDistance && minDistance !== 0) {
+                    minDistance = distance;
+                    currentActive = section.id;
+                }
+            });
+
+            if (currentActive) {
+                setActiveId(currentActive);
+            }
         };
         window.addEventListener("scroll", handleScroll, { passive: true });
+        handleScroll();
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
@@ -130,6 +133,90 @@ function Navbar() {
 
     return (
         <>
+            <style>{`
+                .nav-link {
+                    position: relative;
+                    color: #555;
+                    text-decoration: none;
+                    font-family: var(--font-space-mono), monospace;
+                    font-size: 11px;
+                    letter-spacing: 3px;
+                    text-transform: uppercase;
+                    transition: color 0.3s ease;
+                    padding-bottom: 4px;
+                    display: inline-block;
+                }
+                
+                .nav-link::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 0%;
+                    height: 1px;
+                    background: #FF3B30;
+                    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                
+                .nav-link:hover {
+                    color: #ffffff;
+                }
+                
+                .nav-link:hover::after {
+                    width: 100%;
+                }
+
+                .nav-link.active {
+                    color: #ffffff;
+                }
+
+                .nav-link.active::after {
+                    width: 100%;
+                    background: #FF3B30;
+                }
+
+                .nav-link-wrapper {
+                    display: inline-flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+
+                .nav-cta-btn {
+                    margin-left: 16px;
+                    font-family: var(--font-syne);
+                    font-weight: 700;
+                    font-size: 13px;
+                    color: #fff;
+                    text-decoration: none;
+                    padding: 12px 24px;
+                    border: 1px solid #333;
+                    border-radius: 999px;
+                    background: transparent;
+                    transition: all 0.25s ease;
+                }
+
+                .nav-cta-btn:hover {
+                    background: #fff;
+                    color: #000;
+                    transform: scale(1.03);
+                }
+
+                .logo-dot {
+                    display: inline-block;
+                    color: #FF3B30;
+                    transition: transform 0.3s ease;
+                }
+
+                @keyframes dotPop {
+                    0% { transform: scale(1) }
+                    50% { transform: scale(1.8) }
+                    100% { transform: scale(1) }
+                }
+
+                .logo-container:hover .logo-dot {
+                    animation: dotPop 0.4s ease forwards;
+                }
+            `}</style>
             <nav
                 className="main-nav"
                 style={{
@@ -153,6 +240,7 @@ function Navbar() {
                 {/* Logo */}
                 <a
                     href="#hero"
+                    className="logo-container"
                     style={{
                         fontFamily: "var(--font-syne)",
                         fontWeight: 900,
@@ -164,7 +252,7 @@ function Navbar() {
                     }}
                 >
                     Thesidejob
-                    <span className="period-pulse" style={{ color: "#FF3B30" }}>
+                    <span className="logo-dot">
                         .
                     </span>
                 </a>
@@ -178,28 +266,18 @@ function Navbar() {
                     }}
                 >
                     {NAV_LINKS.map((link) => (
-                        <NavLink key={link.href} {...link} />
+                        <NavLink key={link.href} {...link} activeId={activeId} />
                     ))}
 
                     {/* Support Link */}
                     <Link
                         href="/support"
-                        className="nav-link magnetic"
+                        className={`nav-link magnetic ${pathname === "/support" ? "active" : ""}`}
                         style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 10,
-                            letterSpacing: 3,
-                            color: "#555",
-                            textDecoration: "none",
-                            textTransform: "uppercase",
-                            transition: "color 0.3s ease",
-                            padding: "8px 4px",
                             display: "flex",
                             alignItems: "center",
                             gap: 6,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                     >
                         <span style={{ color: "#FF3B30" }}>♥</span>
                         SUPPORT
@@ -211,29 +289,6 @@ function Navbar() {
                     <a
                         href="#contact"
                         className="nav-cta-btn"
-                        style={{
-                            marginLeft: 16,
-                            fontFamily: "var(--font-syne)",
-                            fontWeight: 700,
-                            fontSize: 13,
-                            color: "#fff",
-                            textDecoration: "none",
-                            padding: "12px 24px",
-                            border: "1px solid #333",
-                            borderRadius: 999,
-                            background: "transparent",
-                            transition: "all 0.3s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#FF3B30";
-                            e.currentTarget.style.borderColor = "#FF3B30";
-                            e.currentTarget.style.color = "#000";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "transparent";
-                            e.currentTarget.style.borderColor = "#333";
-                            e.currentTarget.style.color = "#fff";
-                        }}
                     >
                         Get in Touch
                     </a>
