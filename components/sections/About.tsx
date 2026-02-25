@@ -78,6 +78,44 @@ export default function About() {
                     });
                 });
             });
+
+            mm.add("(max-width: 768px)", () => {
+                // Founder card animations for mobile
+                gsap.utils.toArray<HTMLElement>(".founder-card").forEach((card, i) => {
+                    gsap.from(card, {
+                        opacity: 0,
+                        y: 40,
+                        scrollTrigger: {
+                            trigger: card,
+                            start: "top 85%",
+                            toggleActions: "play none none reverse",
+                        },
+                        duration: 0.8,
+                        delay: i * 0.1,
+                        ease: "power2.out",
+                    });
+                });
+
+                // Stat counters for mobile
+                gsap.utils.toArray<HTMLElement>(".stat-number").forEach((el) => {
+                    const target = el.dataset.target || "0";
+                    if (target === "∞") return;
+                    const counter = { val: 0 };
+                    gsap.to(counter, {
+                        val: parseInt(target),
+                        duration: 1.5,
+                        ease: "power2.out",
+                        scrollTrigger: {
+                            trigger: el,
+                            start: "top 85%",
+                            toggleActions: "play none none reverse",
+                        },
+                        onUpdate: () => {
+                            el.textContent = Math.floor(counter.val).toString();
+                        },
+                    });
+                });
+            });
         });
 
         return () => {
