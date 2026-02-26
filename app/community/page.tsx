@@ -148,64 +148,36 @@ export default function CommunityPage() {
 
     // Fetch Messages & Subscribe
     useEffect(() => {
-        if (!activeChannel && !activeRoomId) return;
+        if (!activeChannel) return;
 
         const fetchMessages = async () => {
-            let query = supabase.from("messages").select("*").order("created_at", { ascending: true }).limit(100);
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('channel', activeChannel)
+                .order('created_at', { ascending: true })
+                .limit(100);
 
-            if (activeRoomId) {
-                query = query.eq("room_id", activeRoomId);
-            } else if (activeChannel === "general") {
-                // To fetch both 'general' and null channels (legacy), though ideally all have a channel 
-                query = query.or("channel.eq.general,channel.is.null").is("room_id", null);
-            } else {
-                query = query.eq("channel", activeChannel).is("room_id", null);
-            }
-
-            const { data, error } = await query;
-            if (data) {
-                setMessages(data.map((m: any) => ({
-                    id: m.id,
-                    sender: m.sender_name || "Anonymous",
-                    avatar: getInitials(m.sender_name || "A"),
-                    text: m.content || "",
-                    time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-                    channel: m.channel,
-                    room_id: m.room_id
-                })));
-            }
-            if (error) console.error("Fetch error:", error);
+            if (data) setMessages(data);
+            if (error) console.error('Fetch error:', error);
         };
 
         fetchMessages();
 
-        const channelFilter = activeRoomId ? `room_id=eq.${activeRoomId}` : `channel=eq.${activeChannel}`;
-
-        const subChannel = supabase
-            .channel(`messages:${activeRoomId || activeChannel}`)
+        const sub = supabase
+            .channel(`room-${activeChannel}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: channelFilter
+                filter: `channel=eq.${activeChannel}`
             }, (payload) => {
-                const m = payload.new as any;
-                setMessages(prev => [...prev, {
-                    id: m.id,
-                    sender: m.sender_name || "Anonymous",
-                    avatar: getInitials(m.sender_name || "A"),
-                    text: m.content || "",
-                    time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-                    channel: m.channel,
-                    room_id: m.room_id
-                }]);
+                setMessages(prev => [...prev, payload.new as any]);
             })
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(subChannel);
-        };
-    }, [activeChannel, activeRoomId]);
+        return () => { supabase.removeChannel(sub) };
+    }, [activeChannel]);
 
     useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
@@ -262,25 +234,25 @@ export default function CommunityPage() {
     };
 
     const sendMessage = async () => {
-        if (!input.trim() || !user || !profile?.username) return;
-        const content = input.trim();
-        setInput("");
-        setEmojiPickerOpen(false);
-        setShowMentions(false);
+        if (!input.trim() || !profile) return;
 
-        const insertData: any = {
-            content,
-            sender_name: profile.username
+        const messageData = {
+            channel: activeChannel,
+            username: profile.username,
+            content: input.trim(),
+            created_at: new Date().toISOString()
         };
 
-        if (activeRoomId) {
-            insertData.room_id = activeRoomId;
-        } else {
-            insertData.channel = activeChannel;
-        }
+        setInput('');
 
-        const { error } = await supabase.from("messages").insert([insertData]);
-        if (error) console.error("Error sending:", error);
+        const { error } = await supabase
+            .from('messages')
+            .insert(messageData);
+
+        if (error) {
+            console.error('Send error:', error);
+            setInput(messageData.content);
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
