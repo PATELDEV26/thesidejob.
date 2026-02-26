@@ -7,35 +7,11 @@ import { useRouter } from "next/navigation";
 
 export default function AuthSection() {
     const { user, profile, loading } = useAuth();
-    const [email, setEmail] = useState("");
-    const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
-    const [errorMsg, setErrorMsg] = useState("");
     const router = useRouter();
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLoginRedirect = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email.trim()) return;
-
-        setStatus("loading");
-        setErrorMsg("");
-
-        const redirectUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/auth/callback`
-            : 'https://thesidejob.tech/auth/callback';
-
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: redirectUrl
-            }
-        });
-
-        if (error) {
-            setStatus("error");
-            setErrorMsg(error.message);
-        } else {
-            setStatus("sent");
-        }
+        router.push("/login");
     };
 
     const handleLogout = async () => {
@@ -162,69 +138,28 @@ export default function AuthSection() {
                         Drop ideas. Join Charcha. Get invited to the Hacker House. One magic link is all it takes.
                     </p>
 
-                    {status === "sent" ? (
-                        <div style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 12,
-                            color: "#32D74B",
-                            marginTop: 16
-                        }}>
-                            Magic link sent. Check your email.
-                        </div>
-                    ) : (
-                        <form onSubmit={handleLogin} style={{ marginTop: 24 }}>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="your@email.com"
-                                required
-                                style={{
-                                    width: "100%",
-                                    maxWidth: 480,
-                                    background: "transparent",
-                                    border: "none",
-                                    borderBottom: "1px solid #333",
-                                    color: "#fff",
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: 14,
-                                    padding: "16px 0",
-                                    outline: "none",
-                                    transition: "0.3s border-bottom-color",
-                                    display: "block"
-                                }}
-                                onFocus={e => e.currentTarget.style.borderBottomColor = "#FF3B30"}
-                                onBlur={e => e.currentTarget.style.borderBottomColor = "#333"}
-                            />
-                            {errorMsg && (
-                                <div style={{ color: "#FF3B30", fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 8 }}>
-                                    {errorMsg}
-                                </div>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={status === "loading"}
-                                style={{
-                                    background: "#FF3B30",
-                                    color: "#000",
-                                    fontFamily: "var(--font-syne)",
-                                    fontWeight: 900,
-                                    fontSize: 14,
-                                    letterSpacing: 2,
-                                    textTransform: "uppercase",
-                                    padding: "18px 36px",
-                                    border: "none",
-                                    cursor: status === "loading" ? "not-allowed" : "pointer",
-                                    marginTop: 16,
-                                    width: "fit-content",
-                                    opacity: status === "loading" ? 0.7 : 1,
-                                    display: "block"
-                                }}
-                            >
-                                {status === "loading" ? "Sending..." : "Send Login Link →"}
-                            </button>
-                        </form>
-                    )}
+                    <form onSubmit={handleLoginRedirect} style={{ marginTop: 24 }}>
+                        <button
+                            type="submit"
+                            style={{
+                                background: "#FF3B30",
+                                color: "#000",
+                                fontFamily: "var(--font-syne)",
+                                fontWeight: 900,
+                                fontSize: 14,
+                                letterSpacing: 2,
+                                textTransform: "uppercase",
+                                padding: "18px 36px",
+                                border: "none",
+                                cursor: "pointer",
+                                marginTop: 16,
+                                width: "fit-content",
+                                display: "block"
+                            }}
+                        >
+                            Log In / Sign Up →
+                        </button>
+                    </form>
                 </div>
             )}
         </section>

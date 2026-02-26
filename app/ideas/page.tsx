@@ -10,31 +10,15 @@ export default function IdeasPage() {
     const router = useRouter();
 
     const [emailStr, setEmailStr] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [magicLinkSent, setMagicLinkSent] = useState(false);
-
-    // Form states
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [phone, setPhone] = useState("");
     const [formSubmitted, setFormSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSendMagicLink = async (e: React.FormEvent) => {
+    const handleLoginRedirect = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!emailStr.trim() || !emailStr.includes("@")) return;
-        setIsSubmitting(true);
-
-        const redirectUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/auth/callback`
-            : 'https://thesidejob.tech/auth/callback';
-
-        const { error } = await supabase.auth.signInWithOtp({
-            email: emailStr,
-            options: { emailRedirectTo: redirectUrl }
-        });
-
-        setIsSubmitting(false);
-        if (!error) setMagicLinkSent(true);
+        router.push("/login");
     };
 
     const handleDropIdea = async (e: React.FormEvent) => {
@@ -74,55 +58,26 @@ export default function IdeasPage() {
                         The best ideas get invited to the Hacker House. Log in first to drop your idea.
                     </p>
 
-                    {magicLinkSent ? (
-                        <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#32D74B", padding: 20 }}>
-                            Magic link sent. Check your email.
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSendMagicLink} style={{ maxWidth: 400, margin: "0 auto" }}>
-                            <input
-                                type="email"
-                                value={emailStr}
-                                onChange={e => setEmailStr(e.target.value)}
-                                placeholder="your@email.com"
-                                style={{
-                                    width: "100%",
-                                    background: "transparent",
-                                    border: "none",
-                                    borderBottom: "1px solid #333",
-                                    color: "#fff",
-                                    fontFamily: "var(--font-space-mono), monospace",
-                                    fontSize: 14,
-                                    padding: "16px 0",
-                                    outline: "none",
-                                    boxSizing: "border-box",
-                                    transition: "border-color 0.3s"
-                                }}
-                                onFocus={(e) => (e.currentTarget.style.borderColor = "#FF3B30")}
-                                onBlur={(e) => (e.currentTarget.style.borderColor = "#333")}
-                            />
-                            <button
-                                type="submit"
-                                disabled={isSubmitting || !emailStr.trim()}
-                                style={{
-                                    background: "#FF3B30",
-                                    color: "#000",
-                                    fontFamily: "var(--font-syne)",
-                                    fontWeight: 900,
-                                    fontSize: 14,
-                                    padding: "18px 36px",
-                                    border: "none",
-                                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                                    marginTop: 32,
-                                    opacity: isSubmitting ? 0.7 : 1,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 2
-                                }}
-                            >
-                                {isSubmitting ? "Sending..." : "Send Login Link →"}
-                            </button>
-                        </form>
-                    )}
+                    <form onSubmit={handleLoginRedirect} style={{ maxWidth: 400, margin: "0 auto" }}>
+                        <button
+                            type="submit"
+                            style={{
+                                background: "#FF3B30",
+                                color: "#000",
+                                fontFamily: "var(--font-syne)",
+                                fontWeight: 900,
+                                fontSize: 14,
+                                padding: "18px 36px",
+                                border: "none",
+                                cursor: "pointer",
+                                marginTop: 32,
+                                textTransform: "uppercase",
+                                letterSpacing: 2
+                            }}
+                        >
+                            Log In To Drop Idea →
+                        </button>
+                    </form>
                 </div>
             ) : (
                 // LOGGED IN STATE

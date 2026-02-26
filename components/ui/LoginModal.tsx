@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 interface LoginModalProps {
     onSuccess: (username?: string) => void;
@@ -11,9 +12,10 @@ interface LoginModalProps {
 
 export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
     const { user, profile, loading } = useAuth();
+    const router = useRouter();
 
-    // Step 1: email, Step 2: email-sent, Step 3: username
-    const [step, setStep] = useState<"email" | "email-sent" | "username">("email");
+    // Step 1: email, Step 3: username (renamed email step to login prompt)
+    const [step, setStep] = useState<"email" | "username">("email");
     const [email, setEmail] = useState("");
     const [username, setUsername] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,32 +33,9 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         }
     }, [user, profile, loading, onSuccess]);
 
-    const handleSendMagicLink = async () => {
-        if (!email.trim() || !email.includes("@")) {
-            setError("Please enter a valid email.");
-            return;
-        }
-        setIsSubmitting(true);
-        setError("");
-
-        const redirectUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/auth/callback`
-            : 'https://thesidejob.tech/auth/callback';
-
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: redirectUrl
-            }
-        });
-
-        setIsSubmitting(false);
-
-        if (signInError) {
-            setError(signInError.message);
-        } else {
-            setStep("email-sent");
-        }
+    const handleLoginRedirect = () => {
+        router.push("/login");
+        onClose();
     };
 
     const handleSetUsername = async () => {
@@ -174,63 +153,24 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
                             Join the Hacker House.
                         </h2>
                         <p style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#555", marginBottom: 32, lineHeight: 1.6 }}>
-                            Enter your email to get a magic login link. No passwords needed.
                         </p>
-
-                        <div>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>
-                                YOUR EMAIL
-                            </div>
-                            <input
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                type="email"
-                                placeholder="john@example.com"
-                                style={{
-                                    width: "100%",
-                                    padding: "16px",
-                                    background: "#111",
-                                    border: "1px solid #222",
-                                    color: "#fff",
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: 14,
-                                    outline: "none",
-                                    boxSizing: "border-box",
-                                    marginBottom: 16
-                                }}
-                            />
-                        </div>
                         <button
-                            onClick={handleSendMagicLink}
-                            disabled={isSubmitting}
+                            onClick={handleLoginRedirect}
                             style={{
                                 width: "100%",
                                 padding: "16px",
                                 background: "#FF3B30",
                                 border: "none",
-                                color: "#fff",
+                                color: "#000",
                                 fontFamily: "var(--font-syne)",
                                 fontWeight: 900,
                                 fontSize: 16,
-                                cursor: isSubmitting ? "not-allowed" : "pointer",
-                                opacity: isSubmitting ? 0.7 : 1
+                                cursor: "pointer"
                             }}
                         >
-                            {isSubmitting ? "Sending..." : "Send Magic Link →"}
+                            Log In / Sign Up →
                         </button>
                     </>
-                )}
-
-                {step === "email-sent" && (
-                    <div style={{ textAlign: "center", padding: "40px 0" }}>
-                        <div style={{ fontSize: 48, marginBottom: 20 }}>📬</div>
-                        <h2 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 28, color: "#fff", marginBottom: 16 }}>
-                            Check your email.
-                        </h2>
-                        <p style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "#555", lineHeight: 1.6 }}>
-                            We sent a magic link to <strong style={{ color: "#fff" }}>{email}</strong>. Click the link to securely log in.
-                        </p>
-                    </div>
                 )}
 
                 {step === "username" && (

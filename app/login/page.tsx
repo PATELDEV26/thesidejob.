@@ -10,9 +10,15 @@ export default function LoginPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
+    // Email Step States
     const [email, setEmail] = useState("");
+    const [emailStep, setEmailStep] = useState<"input" | "verify">("input");
+
+    // Common States
+    const [code, setCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+    const [resendTimer, setResendTimer] = useState(0);
 
     useEffect(() => {
         if (!loading && user) {
@@ -20,23 +26,63 @@ export default function LoginPage() {
         }
     }, [user, loading, router]);
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email.trim() || !email.includes("@")) return;
+    // Timer logic for Resend
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (resendTimer > 0) {
+            interval = setInterval(() => {
+                setResendTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [resendTimer]);
+
+    const handleSendOTP = async (e: React.FormEvent, isResend = false) => {
+        if (e) e.preventDefault();
+        setErrorMsg("");
+
+        if (!email.trim() || !email.includes("@")) {
+            setErrorMsg("Please enter a valid email address.");
+            return;
+        }
+
         setIsSubmitting(true);
-
-        const redirectUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/auth/callback`
-            : 'https://thesidejob.tech/auth/callback';
-
         const { error } = await supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: redirectUrl }
+            options: { shouldCreateUser: true }
+        });
+        setIsSubmitting(false);
+
+        if (error) {
+            setErrorMsg(error.message);
+        } else {
+            if (!isResend) setEmailStep("verify");
+            setResendTimer(30);
+        }
+    };
+
+    const handleVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (code.length !== 6) {
+            setErrorMsg("Please enter a 6-digit code.");
+            return;
+        }
+
+        setErrorMsg("");
+        setIsSubmitting(true);
+
+        const { error } = await supabase.auth.verifyOtp({
+            email,
+            token: code,
+            type: "email",
         });
 
         setIsSubmitting(false);
-        if (!error) {
-            setSuccess(true);
+
+        if (error) {
+            setErrorMsg(error.message);
+        } else {
+            router.push("/ideas");
         }
     };
 
@@ -68,22 +114,17 @@ export default function LoginPage() {
                     // MEMBER ACCESS
                 </div>
 
-                <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 56, color: "#fff", lineHeight: 0.9, margin: 0 }}>
+                <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 56, color: "#fff", lineHeight: 0.9, margin: 0, marginBottom: 40 }}>
                     One login.<br />
                     Everything<br />
                     unlocked<span style={{ color: "#FF3B30" }}>.</span>
                 </h1>
 
-                <p style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 12, color: "#555", marginTop: 24, marginBottom: 40, lineHeight: 1.6 }}>
-                    Drop ideas. Join Charcha. Get invited to the Hacker House. Enter your email and we'll send a magic link — no password needed.
-                </p>
-
-                {success ? (
-                    <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#32D74B", textAlign: "center", padding: 20 }}>
-                        ✓ Magic link sent. Check your inbox.
-                    </div>
-                ) : (
-                    <form onSubmit={handleLogin}>
+                {emailStep === "input" ? (
+                    <form onSubmit={handleSendOTP}>
+                        <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 12, color: "#555", marginBottom: 16 }}>
+                            Enter your email to receive a login code
+                        </div>
                         <input
                             type="email"
                             required
@@ -91,44 +132,90 @@ export default function LoginPage() {
                             onChange={e => setEmail(e.target.value)}
                             placeholder="your@email.com"
                             style={{
-                                width: "100%",
-                                background: "#0a0a0a",
-                                border: "1px solid #1a1a1a",
-                                color: "#fff",
-                                fontFamily: "var(--font-space-mono), monospace",
-                                fontSize: 14,
-                                padding: "16px 20px",
-                                outline: "none",
-                                boxSizing: "border-box",
-                                transition: "border-color 0.3s"
+                                width: "100%", background: "#0a0a0a", border: "1px solid #1a1a1a", color: "#fff",
+                                fontFamily: "var(--font-space-mono), monospace", fontSize: 14, padding: "16px 20px",
+                                outline: "none", boxSizing: "border-box", transition: "border-color 0.3s"
                             }}
                             onFocus={e => e.currentTarget.style.borderColor = "#FF3B30"}
                             onBlur={e => e.currentTarget.style.borderColor = "#1a1a1a"}
                         />
+                        {errorMsg && <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#FF3B30", marginTop: 8 }}>{errorMsg}</div>}
                         <button
                             type="submit"
                             disabled={isSubmitting || !email.trim()}
                             style={{
-                                width: "100%",
-                                height: 60,
-                                background: "#FF3B30",
-                                color: "#000",
-                                fontFamily: "var(--font-syne)",
-                                fontWeight: 900,
-                                fontSize: 15,
-                                textTransform: "uppercase",
-                                letterSpacing: 3,
-                                border: "none",
-                                cursor: isSubmitting ? "not-allowed" : "pointer",
-                                marginTop: 12,
-                                opacity: isSubmitting ? 0.7 : 1
+                                width: "100%", height: 60, background: "#FF3B30", color: "#000", fontFamily: "var(--font-syne)",
+                                fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: 3, border: "none",
+                                cursor: isSubmitting ? "not-allowed" : "pointer", marginTop: 12, opacity: isSubmitting ? 0.7 : 1
                             }}
                         >
-                            {isSubmitting ? "Sending..." : "Send Magic Link →"}
+                            {isSubmitting ? "Sending..." : "Send Code →"}
                         </button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleVerify}>
+                        <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 12, color: "#555", marginBottom: 16 }}>
+                            Code sent to {email}
+                        </div>
+                        <input
+                            type="number"
+                            required
+                            maxLength={6}
+                            value={code}
+                            onChange={e => setCode(e.target.value.slice(0, 6))}
+                            placeholder="000000"
+                            style={{
+                                width: "100%", background: "#0a0a0a", border: "1px solid #1a1a1a", color: "#fff",
+                                fontFamily: "var(--font-space-mono), monospace", fontSize: 24, letterSpacing: 8, padding: "16px 20px", textIndent: 12,
+                                outline: "none", boxSizing: "border-box", transition: "border-color 0.3s", textAlign: "center"
+                            }}
+                            onFocus={e => e.currentTarget.style.borderColor = "#FF3B30"}
+                            onBlur={e => e.currentTarget.style.borderColor = "#1a1a1a"}
+                        />
+                        {errorMsg && <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#FF3B30", marginTop: 8 }}>{errorMsg}</div>}
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || code.length < 6}
+                            style={{
+                                width: "100%", height: 60, background: "#FF3B30", color: "#000", fontFamily: "var(--font-syne)",
+                                fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: 3, border: "none",
+                                cursor: isSubmitting ? "not-allowed" : "pointer", marginTop: 12, opacity: isSubmitting ? 0.7 : 1
+                            }}
+                        >
+                            {isSubmitting ? "Verifying..." : "Verify Code →"}
+                        </button>
+
+                        <div style={{ marginTop: 24, textAlign: "center" }}>
+                            {resendTimer > 0 ? (
+                                <span style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#555" }}>
+                                    Resend in {resendTimer}s
+                                </span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleSendOTP(e, true)}
+                                    style={{
+                                        background: "transparent", border: "none", color: "#FF3B30", cursor: "pointer",
+                                        fontFamily: "var(--font-space-mono), monospace", fontSize: 11, textDecoration: "underline"
+                                    }}
+                                >
+                                    Resend Code
+                                </button>
+                            )}
+                        </div>
                     </form>
                 )}
             </div>
+            <style jsx>{`
+                input[type="number"]::-webkit-inner-spin-button,
+                input[type="number"]::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type="number"] {
+                    -moz-appearance: textfield;
+                }
+            `}</style>
         </div>
     );
 }

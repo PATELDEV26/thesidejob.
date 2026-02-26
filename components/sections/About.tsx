@@ -5,11 +5,11 @@ import gsap from "@/lib/gsap";
 import { ScrollTrigger } from "@/lib/gsap";
 
 const FOUNDERS = [
-    { name: "Dhariya Patel", role: "Co-Founder", initials: "DP", rotate: -3, top: "10%", left: "5%" },
-    { name: "Dev Patel", role: "Co-Founder", initials: "DP", rotate: 2, top: "5%", left: "35%" },
-    { name: "Aditya Gupta", role: "Co-Founder", initials: "AG", rotate: -2, top: "25%", left: "60%" },
-    { name: "Harshit Patel", role: "Co-Founder", initials: "HP", rotate: 3, top: "45%", left: "20%" },
-    { name: "Vansh Kaushal", role: "Co-Founder", initials: "VK", rotate: -1, top: "40%", left: "70%" },
+    { name: "Dhariya Patel", role: "Co-Founder", initials: "DP", rotate: -3, top: "10%", left: "5%", links: { site: "https://dhairyapatel.vercel.app/", linkedin: "https://www.linkedin.com/in/dhairya-patel-1482122b2" } },
+    { name: "Dev Patel", role: "Co-Founder", initials: "DP", rotate: 2, top: "5%", left: "35%", links: { linkedin: "https://www.linkedin.com/in/dev-patel-66363b257/" } },
+    { name: "Aditya Gupta", role: "Co-Founder", initials: "AG", rotate: -2, top: "25%", left: "60%", links: { site: "https://adityagupta2005.in", linkedin: "https://www.linkedin.com/in/aditya-gupta-a6196129a" } },
+    { name: "Harshit Patel", role: "Co-Founder", initials: "HP", rotate: 3, top: "45%", left: "20%", links: { linkedin: "https://www.linkedin.com/in/harshit-patel-4b71b8371" } },
+    { name: "Vansh Kaushal", role: "Co-Founder", initials: "VK", rotate: -1, top: "40%", left: "70%", links: { linkedin: "https://www.linkedin.com/in/vansh-soni-1253762a5/" } },
 ];
 
 export default function About() {
@@ -345,6 +345,28 @@ export default function About() {
                                     }}
                                 >
                                     {f.role}
+                                </div>
+                                <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+                                    {f.links && Object.entries(f.links).map(([platform, url]) => (
+                                        <a
+                                            key={platform}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                fontFamily: "var(--font-mono)",
+                                                fontSize: 10,
+                                                color: "#666",
+                                                textDecoration: "underline",
+                                                textTransform: "uppercase",
+                                                transition: "color 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.color = "#FF3B30"}
+                                            onMouseLeave={(e) => e.currentTarget.style.color = "#666"}
+                                        >
+                                            {platform} ↗
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
                         ))}

@@ -12,6 +12,7 @@ const PROJECTS = [
         name: "VelocityShare",
         desc: "A next-generation file sharing and collaboration platform built for teams that move fast. Featuring real-time sync and end-to-end encryption.",
         status: "Live" as const,
+        hideView: true,
     },
     {
         monogram: "HHI",
@@ -20,6 +21,7 @@ const PROJECTS = [
         name: "Hacker House India",
         desc: "A groundbreaking hybrid space where India's top developers converge to build, collaborate, and push boundaries.",
         status: "In Development" as const,
+        hideView: true,
     },
 ];
 
@@ -180,16 +182,18 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[0]; index: n
                     </div>
 
                     {/* View link */}
-                    <span
-                        style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 12,
-                            color: isHovered ? "#FF3B30" : "#555",
-                            transition: "color 0.3s ease",
-                        }}
-                    >
-                        View →
-                    </span>
+                    {!project.hideView && (
+                        <span
+                            style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 12,
+                                color: isHovered ? "#FF3B30" : "#555",
+                                transition: "color 0.3s ease",
+                            }}
+                        >
+                            View →
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

@@ -135,62 +135,6 @@ export default function Hero() {
                 background: "#000",
             }}
         >
-            {/* Keyframe definitions */}
-            <style>{`
-                @keyframes heroFadeUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(24px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                @keyframes heroBounce {
-                    0%, 100% {
-                        transform: translateY(0);
-                    }
-                    50% {
-                        transform: translateY(8px);
-                    }
-                }
-                @keyframes termBlink {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0; }
-                }
-                @media (max-width: 900px) {
-                    .hero-grid {
-                        grid-template-columns: 1fr !important;
-                        min-height: 100vh !important;
-                        padding: 120px 24px 60px !important;
-                        gap: 20px !important;
-                    }
-                    .hero-terminal-col {
-                        display: none !important;
-                    }
-                }
-                @media (max-width: 768px) {
-                    .hero-grid {
-                        padding-left: 24px !important;
-                    }
-                    .hero-buttons {
-                        flex-direction: column !important;
-                        width: 100%;
-                        gap: 12px !important;
-                    }
-                    .hero-buttons > a {
-                        width: 100%;
-                        text-align: center;
-                        box-sizing: border-box;
-                    }
-                }
-                @media (max-width: 480px) {
-                    .hero-grid {
-                        padding: 100px 20px 40px !important;
-                    }
-                }
-            `}</style>
 
             {/* WebGL Particles */}
             <div
