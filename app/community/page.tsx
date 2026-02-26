@@ -148,13 +148,20 @@ export default function CommunityPage() {
 
     // Fetch Messages & Subscribe
     useEffect(() => {
-        if (!activeChannel) return;
+        // Clear messages when switching
+        setMessages([]);
+
+        const isRoom = activeRoomId !== null;
+        const filterKey = isRoom ? 'room_id' : 'message_channel';
+        const filterValue = isRoom ? activeRoomId : activeChannel;
+
+        if (!filterValue) return;
 
         const fetchMessages = async () => {
             const { data, error } = await supabase
                 .from('messages')
                 .select('*')
-                .eq('message_channel', activeChannel)
+                .eq(filterKey, filterValue)
                 .order('created_at', { ascending: true })
                 .limit(100);
 
@@ -164,20 +171,21 @@ export default function CommunityPage() {
 
         fetchMessages();
 
+        const subKey = isRoom ? `room-${activeRoomId}` : `channel-${activeChannel}`;
         const sub = supabase
-            .channel(`chat-${activeChannel}`)
+            .channel(subKey)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: `message_channel=eq.${activeChannel}`
+                filter: `${filterKey}=eq.${filterValue}`
             }, (payload) => {
                 setMessages(prev => [...prev, payload.new as any]);
             })
             .subscribe();
 
         return () => { supabase.removeChannel(sub) };
-    }, [activeChannel]);
+    }, [activeChannel, activeRoomId]);
 
     useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
@@ -239,15 +247,24 @@ export default function CommunityPage() {
         const content = input.trim();
         setInput('');
 
+        const insertData: any = {
+            content,
+            sender_name: profile.username,
+            username: profile.username,
+            created_at: new Date().toISOString()
+        };
+
+        if (activeRoomId) {
+            insertData.room_id = activeRoomId;
+            insertData.message_channel = null;
+        } else {
+            insertData.message_channel = activeChannel;
+            insertData.room_id = null;
+        }
+
         const { data, error } = await supabase
             .from('messages')
-            .insert({
-                content: content,
-                sender_name: profile.username,
-                username: profile.username,
-                message_channel: activeChannel,
-                created_at: new Date().toISOString()
-            })
+            .insert(insertData)
             .select()
             .single();
 

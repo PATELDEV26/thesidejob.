@@ -3,15 +3,38 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import {
-    DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor,
-    useSensor, useSensors, DragStartEvent, DragOverEvent, DragEndEvent
-} from "@dnd-kit/core";
-import {
-    SortableContext, arrayMove, sortableKeyboardCoordinates,
-    useSortable, verticalListSortingStrategy
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { DndContext, DragEndEvent, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
+
+// Droppable column wrapper
+function DroppableColumn({ id, children, ...props }: any) {
+    const { setNodeRef, isOver } = useDroppable({ id })
+    return (
+        <div ref={setNodeRef} style={{
+            minHeight: 200,
+            border: isOver ? '1px solid #FF3B30' : '1px solid #1a1a1a',
+            transition: 'border-color 0.2s',
+            ...props.style
+        }}>
+            {children}
+        </div>
+    )
+}
+
+// Draggable card wrapper  
+function DraggableCard({ id, children }: any) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id })
+    return (
+        <div ref={setNodeRef} {...listeners} {...attributes} style={{
+            transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
+            opacity: isDragging ? 0.5 : 1,
+            cursor: 'grab',
+            zIndex: isDragging ? 999 : 1,
+            position: 'relative'
+        }}>
+            {children}
+        </div>
+    )
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -82,29 +105,12 @@ function IdeaCard({ idea, isDragging, onApprove, onMessage, onEmail }: { idea: I
     );
 }
 
-function SortableIdeaCard({ idea, onApprove, onMessage, onEmail }: any) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: idea.id });
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
-    return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <IdeaCard idea={idea} isDragging={isDragging} onApprove={onApprove} onMessage={onMessage} onEmail={onEmail} />
-        </div>
-    );
-}
+
 
 export default function AdminIdeaBoard() {
     const router = useRouter();
     const [ideas, setIdeas] = useState<Idea[]>([]);
-    const [activeId, setActiveId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-    );
 
     useEffect(() => {
         const checkAdminAndFetch = async () => {
@@ -160,77 +166,25 @@ export default function AdminIdeaBoard() {
         window.location.href = `mailto:${idea.email}?subject=Regarding your idea: ${idea.title}`;
     };
 
-    const onDragStart = (event: DragStartEvent) => {
-        setActiveId(event.active.id as string);
-    };
-
-    const onDragOver = (event: DragOverEvent) => {
+    const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
-        if (!over) return;
+        if (!over || active.id === over.id) return;
 
-        const activeId = active.id;
-        const overId = over.id;
+        const ideaId = active.id as string;
+        const newStatus = over.id as string;
 
-        if (activeId === overId) return;
+        // Update in Supabase
+        const { error } = await supabase
+            .from('ideas')
+            .update({ status: newStatus })
+            .eq('id', ideaId);
 
-        const isActiveCard = active.data.current?.sortable;
-        const isOverCard = over.data.current?.sortable;
-
-        if (!isActiveCard) return;
-
-        const activeIdea = ideas.find(i => i.id === activeId);
-        if (!activeIdea) return;
-
-        const activeStatus = activeIdea.status;
-        let overStatus = "";
-
-        if (isOverCard) {
-            const overIdea = ideas.find(i => i.id === overId);
-            if (!overIdea) return;
-            overStatus = overIdea.status;
-        } else {
-            overStatus = overId as string;
-        }
-
-        if (activeStatus !== overStatus && overStatus) {
-            setIdeas(prev => {
-                const activeItems = prev.filter(i => i.status === activeStatus);
-                const overItems = prev.filter(i => i.status === overStatus);
-                const activeIndex = activeItems.findIndex(i => i.id === activeId);
-                const overIndex = isOverCard ? overItems.findIndex(i => i.id === overId) : overItems.length;
-
-                let newItems = [...prev];
-                const itemToMove = newItems.find(i => i.id === activeId);
-                if (itemToMove) {
-                    itemToMove.status = overStatus;
-                }
-                return newItems;
-            });
+        if (!error) {
+            setIdeas(prev => prev.map(idea =>
+                idea.id === ideaId ? { ...idea, status: newStatus } : idea
+            ));
         }
     };
-
-    const onDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-        setActiveId(null);
-
-        if (!over) return;
-        const activeIdea = ideas.find(i => i.id === active.id);
-        if (!activeIdea) return;
-
-        let overStatus = over.data.current?.sortable
-            ? ideas.find(i => i.id === over.id)?.status
-            : over.id as string;
-
-        if (overStatus && activeIdea.status === overStatus) {
-            // In the same column, we don't care about order internally for now, 
-            // but if we did, we'd arrayMove.
-        }
-
-        // Sync to DB
-        await updateIdeaStatus(activeIdea.id, activeIdea.status);
-    };
-
-    const activeIdea = ideas.find(i => i.id === activeId);
 
     const pendingCount = ideas.filter(i => i.status === "ideas").length;
     const approvedCount = ideas.filter(i => i.status === "approved").length;
@@ -238,7 +192,7 @@ export default function AdminIdeaBoard() {
     if (loading) return <div style={{ background: "#000", height: "100vh", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading Board...</div>;
 
     return (
-        <div style={{ background: "#000", minHeight: "100vh", color: "#fff", padding: "40px 0" }}>
+        <div style={{ background: "#000", minHeight: "100vh", color: "#fff", padding: "80px 0 40px 0" }}>
             <div style={{ padding: "0 40px", marginBottom: 32 }}>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#FF3B30", marginBottom: 8 }}>// Idea Board</div>
                 <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 48, margin: 0 }}>Submitted Ideas</h1>
@@ -260,21 +214,16 @@ export default function AdminIdeaBoard() {
             </div>
 
             <div style={{ padding: "0 40px", overflowX: "auto" }}>
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCorners}
-                    onDragStart={onDragStart}
-                    onDragOver={onDragOver}
-                    onDragEnd={onDragEnd}
-                >
+                <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
                         {COLUMNS.map(col => {
                             const columnIdeas = ideas.filter(i => i.status === col.id);
                             return (
-                                <div key={col.id} style={{ width: 340, background: "#050505", border: "1px solid #1a1a1a", display: "flex", flexDirection: "column" }}>
+                                <DroppableColumn key={col.id} id={col.id} style={{ width: 340, background: "#050505", display: "flex", flexDirection: "column" }}>
                                     <div style={{
                                         padding: "16px", borderBottom: `2px solid ${col.color}`,
-                                        display: "flex", justifyContent: "space-between", alignItems: "center"
+                                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                                        background: "#050505"
                                     }}>
                                         <div style={{ fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 14, letterSpacing: 2 }}>{col.title}</div>
                                         <div style={{
@@ -283,25 +232,21 @@ export default function AdminIdeaBoard() {
                                         }}>{columnIdeas.length}</div>
                                     </div>
                                     <div style={{ padding: "16px", flex: 1, minHeight: 400 }}>
-                                        <SortableContext id={col.id} items={columnIdeas.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                                            {columnIdeas.map(idea => (
-                                                <SortableIdeaCard
-                                                    key={idea.id}
+                                        {columnIdeas.map(idea => (
+                                            <DraggableCard key={idea.id} id={idea.id}>
+                                                <IdeaCard
                                                     idea={idea}
                                                     onApprove={handleApproveAndInvite}
                                                     onMessage={handleMessageChannel}
                                                     onEmail={handleEmail}
                                                 />
-                                            ))}
-                                        </SortableContext>
+                                            </DraggableCard>
+                                        ))}
                                     </div>
-                                </div>
+                                </DroppableColumn>
                             );
                         })}
                     </div>
-                    <DragOverlay>
-                        {activeIdea ? <IdeaCard idea={activeIdea} isDragging onApprove={() => { }} onMessage={() => { }} onEmail={() => { }} /> : null}
-                    </DragOverlay>
                 </DndContext>
             </div>
         </div>

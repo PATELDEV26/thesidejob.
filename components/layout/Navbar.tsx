@@ -8,9 +8,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV_LINKS = [
-    { label: "SERVICES", href: "#services" },
-    { label: "WORK", href: "#work" },
-    { label: "ABOUT", href: "#about" },
+    { label: "SERVICES", href: "/#services" },
+    { label: "WORK", href: "/#work" },
+    { label: "ABOUT", href: "/#about" },
     { label: "IDEAS", href: "/ideas" },
 ];
 
@@ -73,18 +73,47 @@ function LoginLink({ onClick, activeId, isMobile, i, menuOpen }: { onClick?: () 
 function NavLink({ label, href, activeId, onClick }: { label: string; href: string; activeId?: string; onClick?: () => void }) {
     const ref = useRef<HTMLAnchorElement>(null);
     useMagneticEffect(ref, 0.2);
-    const isActive = activeId === href.replace('#', '');
-    return (
-        <a
-            ref={ref}
-            href={href}
-            className={`nav-link magnetic ${isActive ? "active" : ""}`}
-            onClick={onClick}
-            data-text={label}
-        >
-            {label}
-        </a>
-    );
+
+    // Check if isActive using split
+    const isActive = href.includes('#') && activeId === href.split('#')[1];
+
+    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (onClick) onClick();
+        if (href.startsWith('/#')) {
+            const sectionId = href.split('#')[1];
+            if (window.location.pathname === '/') {
+                e.preventDefault();
+                const el = document.getElementById(sectionId);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    };
+
+    if (href.startsWith('/#')) {
+        return (
+            <a
+                ref={ref}
+                href={href}
+                className={`nav-link magnetic ${isActive ? "active" : ""}`}
+                onClick={handleClick}
+                data-text={label}
+            >
+                {label}
+            </a>
+        );
+    } else {
+        return (
+            <Link
+                ref={ref as any}
+                href={href}
+                className={`nav-link magnetic ${isActive ? "active" : ""}`}
+                onClick={onClick}
+                data-text={label}
+            >
+                {label}
+            </Link>
+        );
+    }
 }
 
 function CharchaLink({ onClick, isActive }: { onClick?: () => void, isActive?: boolean }) {
@@ -141,7 +170,10 @@ function Navbar() {
         const handleScroll = () => {
             setScrolled(window.scrollY > 100);
 
-            const sections = NAV_LINKS.map(link => document.getElementById(link.href.replace('#', ''))).filter(Boolean) as HTMLElement[];
+            const sections = NAV_LINKS.map(link => {
+                const parts = link.href.split('#');
+                return parts.length > 1 ? document.getElementById(parts[1]) : null;
+            }).filter(Boolean) as HTMLElement[];
             if (sections.length === 0) return;
 
             let currentActive = "";
@@ -211,8 +243,8 @@ function Navbar() {
                 }}
             >
                 {/* Logo */}
-                <a
-                    href="#hero"
+                <Link
+                    href="/"
                     className="logo-container"
                     style={{
                         fontFamily: "var(--font-syne)",
@@ -228,7 +260,7 @@ function Navbar() {
                     <span className="logo-dot">
                         .
                     </span>
-                </a>
+                </Link>
 
                 {/* Desktop Nav Links */}
                 <div className="nav-desktop-links"
@@ -261,8 +293,15 @@ function Navbar() {
 
                     {/* Get in Touch Button */}
                     <a
-                        href="#contact"
+                        href="/#contact"
                         className="nav-cta-btn"
+                        onClick={(e) => {
+                            if (window.location.pathname === '/') {
+                                e.preventDefault();
+                                const el = document.getElementById('contact');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }}
                     >
                         Get in Touch
                     </a>
@@ -346,30 +385,58 @@ function Navbar() {
             >
                 {/* Mobile Menu Links */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-                    {NAV_LINKS.map((link, i) => (
-                        <a
-                            key={link.href}
-                            href={link.href}
-                            onClick={closeMenu}
-                            style={{
-                                fontFamily: "var(--font-syne)",
-                                fontWeight: 900,
-                                fontSize: "10vw",
-                                color: "#fff",
-                                textDecoration: "none",
-                                letterSpacing: -2,
-                                textTransform: "uppercase",
-                                transition: "all 0.3s ease",
-                                opacity: menuOpen ? 1 : 0,
-                                transform: menuOpen ? "translateY(0)" : "translateY(20px)",
-                                transitionDelay: `${0.1 + i * 0.1}s`,
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
-                        >
-                            {link.label}
-                        </a>
-                    ))}
+                    {NAV_LINKS.map((link, i) => {
+                        const isHash = link.href.startsWith('/#');
+                        const linkStyle = {
+                            fontFamily: "var(--font-syne)",
+                            fontWeight: 900,
+                            fontSize: "10vw",
+                            color: "#fff",
+                            textDecoration: "none",
+                            letterSpacing: -2,
+                            textTransform: "uppercase",
+                            transition: "all 0.3s ease",
+                            opacity: menuOpen ? 1 : 0,
+                            transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                            transitionDelay: `${0.1 + i * 0.1}s`,
+                        };
+                        const handleInteraction = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                            if (isHash && window.location.pathname === '/') {
+                                e.preventDefault();
+                                const el = document.getElementById(link.href.split('#')[1]);
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }
+                            closeMenu();
+                        };
+
+                        if (isHash) {
+                            return (
+                                <a
+                                    key={link.href}
+                                    href={link.href}
+                                    onClick={handleInteraction}
+                                    style={linkStyle as React.CSSProperties}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
+                                >
+                                    {link.label}
+                                </a>
+                            );
+                        } else {
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    onClick={closeMenu}
+                                    style={linkStyle as React.CSSProperties}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        }
+                    })}
                     <LoginLink isMobile={true} i={NAV_LINKS.length} onClick={closeMenu} menuOpen={menuOpen} />
                 </div>
 
@@ -419,8 +486,15 @@ function Navbar() {
                     </div>
 
                     <a
-                        href="#contact"
-                        onClick={closeMenu}
+                        href="/#contact"
+                        onClick={(e) => {
+                            if (window.location.pathname === '/') {
+                                e.preventDefault();
+                                const el = document.getElementById('contact');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }
+                            closeMenu();
+                        }}
                         style={{
                             marginTop: 10,
                             fontFamily: "var(--font-syne)",
