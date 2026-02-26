@@ -126,6 +126,7 @@ export default function Hero() {
     return (
         <section
             id="hero"
+            className="full-height"
             style={{
                 position: "relative",
                 minHeight: "100vh",
@@ -134,47 +135,6 @@ export default function Hero() {
                 background: "#000",
             }}
         >
-            {/* Keyframe definitions */}
-            <style>{`
-                @keyframes heroFadeUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(24px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                @keyframes heroBounce {
-                    0%, 100% {
-                        transform: translateY(0);
-                    }
-                    50% {
-                        transform: translateY(8px);
-                    }
-                }
-                @keyframes termBlink {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0; }
-                }
-                @media (max-width: 900px) {
-                    .hero-grid {
-                        grid-template-columns: 1fr !important;
-                        min-height: 100vh !important;
-                        padding: 120px 24px 60px !important;
-                        gap: 20px !important;
-                    }
-                    .hero-terminal-col {
-                        display: none !important;
-                    }
-                }
-                @media (max-width: 480px) {
-                    .hero-grid {
-                        padding: 100px 20px 40px !important;
-                    }
-                }
-            `}</style>
 
             {/* WebGL Particles */}
             <div
@@ -220,7 +180,7 @@ export default function Hero() {
                                 style={{
                                     fontFamily: "var(--font-syne)",
                                     fontWeight: 900,
-                                    fontSize: "clamp(72px, 11vw, 160px)",
+                                    fontSize: "clamp(52px, 14vw, 160px)",
                                     letterSpacing: -4,
                                     lineHeight: 0.88,
                                     color: "#fff",
@@ -264,6 +224,7 @@ export default function Hero() {
 
                     {/* Buttons */}
                     <div
+                        className="hero-buttons"
                         style={{
                             display: "flex",
                             gap: 16,

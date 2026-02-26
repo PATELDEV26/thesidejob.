@@ -59,7 +59,9 @@ function Footer() {
                 }}
             >
                 <a
-                    href="mailto:hello@thesidejob.co"
+                    href="mailto:thesidejobfive@gmail.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: 12,
@@ -70,27 +72,52 @@ function Footer() {
                     onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
-                    hello@thesidejob.co
+                    thesidejobfive@gmail.com
                 </a>
 
                 <div style={{ display: "flex", gap: 32 }}>
-                    {["Instagram", "LinkedIn", "GitHub"].map((s) => (
-                        <a
-                            key={s}
-                            href="#"
-                            style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: 12,
-                                color: "#555",
-                                textDecoration: "none",
-                                transition: "color 0.3s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-                        >
-                            {s}
-                        </a>
-                    ))}
+                    <a
+                        href="https://www.instagram.com/the.side.job?igsh=MWhueDJycjBmd3VhZQ=="
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "#555",
+                            textDecoration: "none",
+                            transition: "color 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                    >Instagram</a>
+                    <a
+                        href="https://www.linkedin.com/in/thesidejob-9b44643b0"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "#555",
+                            textDecoration: "none",
+                            transition: "color 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                    >LinkedIn</a>
+                    <a
+                        href="https://github.com/PATELDEV26"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "#555",
+                            textDecoration: "none",
+                            transition: "color 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                    >GitHub</a>
                 </div>
 
                 <span
@@ -183,7 +210,6 @@ function Footer() {
                             { label: "Work", href: "#work" },
                             { label: "About", href: "#about" },
                             { label: "Ideas", href: "#drop-idea" },
-                            { label: "Contact", href: "#contact" },
                             { label: "Support", href: "/support" },
                         ].map(({ label, href }) => (
                             <a
