@@ -586,11 +586,17 @@ export default function SupportPage() {
                         </div>
 
                         <img
-                            src={qrUrl}
-                            alt="UPI QR Code"
-                            width={200}
-                            height={200}
-                            style={{ border: "8px solid white", marginBottom: 16 }}
+                            src="/qr-code.jpeg"
+                            alt="PhonePe QR Code"
+                            width={280}
+                            style={{ 
+                                border: "4px solid #1a1a1a", 
+                                borderRadius: 12, 
+                                marginBottom: 16, 
+                                maxWidth: "100%", 
+                                height: "auto",
+                                objectFit: "contain"
+                            }}
                         />
 
                         <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555" }}>
