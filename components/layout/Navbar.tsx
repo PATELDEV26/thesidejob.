@@ -5,14 +5,70 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMagneticEffect } from "@/hooks/useMagneticEffect";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const NAV_LINKS = [
     { label: "SERVICES", href: "#services" },
     { label: "WORK", href: "#work" },
     { label: "ABOUT", href: "#about" },
-    { label: "IDEAS", href: "#drop-idea" },
-    { label: "CONTACT", href: "#contact" },
+    { label: "IDEAS", href: "/ideas" },
 ];
+
+function LoginLink({ onClick, activeId, isMobile, i, menuOpen }: { onClick?: () => void, activeId?: string, isMobile?: boolean, i?: number, menuOpen?: boolean }) {
+    const { user, profile, loading } = useAuth();
+
+    if (loading) return null;
+
+    let label = "LOGIN";
+    let linkHref = "/login";
+    let displayColor = isMobile ? "#fff" : undefined;
+
+    if (user) {
+        let displayName = profile?.username ? profile.username.toUpperCase() : "ACCOUNT";
+        if (displayName.length > 10) displayName = displayName.substring(0, 8);
+        label = `HI, ${displayName}`;
+        linkHref = "/account";
+        displayColor = "#fff";
+    }
+
+    if (isMobile) {
+        return (
+            <Link
+                href={linkHref}
+                onClick={onClick}
+                style={{
+                    fontFamily: "var(--font-syne)",
+                    fontWeight: 900,
+                    fontSize: "10vw",
+                    color: displayColor || "#fff",
+                    textDecoration: "none",
+                    letterSpacing: -2,
+                    textTransform: "uppercase",
+                    transition: "all 0.3s ease",
+                    opacity: menuOpen ? 1 : 0,
+                    transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                    transitionDelay: `${0.1 + (i || 0) * 0.1}s`,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
+            >
+                {label}
+            </Link>
+        );
+    }
+
+    return (
+        <Link
+            href={linkHref}
+            className={`nav-link magnetic ${activeId === 'login' ? 'active' : ''}`}
+            onClick={onClick}
+            style={{ color: displayColor }}
+        >
+            {label}
+        </Link>
+    );
+}
+
 
 function NavLink({ label, href, activeId, onClick }: { label: string; href: string; activeId?: string; onClick?: () => void }) {
     const ref = useRef<HTMLAnchorElement>(null);
@@ -133,90 +189,7 @@ function Navbar() {
 
     return (
         <>
-            <style>{`
-                .nav-link {
-                    position: relative;
-                    color: #555;
-                    text-decoration: none;
-                    font-family: var(--font-space-mono), monospace;
-                    font-size: 11px;
-                    letter-spacing: 3px;
-                    text-transform: uppercase;
-                    transition: color 0.3s ease;
-                    padding-bottom: 4px;
-                    display: inline-block;
-                }
-                
-                .nav-link::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 0%;
-                    height: 1px;
-                    background: #FF3B30;
-                    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-                
-                .nav-link:hover {
-                    color: #ffffff;
-                }
-                
-                .nav-link:hover::after {
-                    width: 100%;
-                }
 
-                .nav-link.active {
-                    color: #ffffff;
-                }
-
-                .nav-link.active::after {
-                    width: 100%;
-                    background: #FF3B30;
-                }
-
-                .nav-link-wrapper {
-                    display: inline-flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                }
-
-                .nav-cta-btn {
-                    margin-left: 16px;
-                    font-family: var(--font-syne);
-                    font-weight: 700;
-                    font-size: 13px;
-                    color: #fff;
-                    text-decoration: none;
-                    padding: 12px 24px;
-                    border: 1px solid #333;
-                    border-radius: 999px;
-                    background: transparent;
-                    transition: all 0.25s ease;
-                }
-
-                .nav-cta-btn:hover {
-                    background: #fff;
-                    color: #000;
-                    transform: scale(1.03);
-                }
-
-                .logo-dot {
-                    display: inline-block;
-                    color: #FF3B30;
-                    transition: transform 0.3s ease;
-                }
-
-                @keyframes dotPop {
-                    0% { transform: scale(1) }
-                    50% { transform: scale(1.8) }
-                    100% { transform: scale(1) }
-                }
-
-                .logo-container:hover .logo-dot {
-                    animation: dotPop 0.4s ease forwards;
-                }
-            `}</style>
             <nav
                 className="main-nav"
                 style={{
@@ -268,6 +241,7 @@ function Navbar() {
                     {NAV_LINKS.map((link) => (
                         <NavLink key={link.href} {...link} activeId={activeId} />
                     ))}
+                    <LoginLink activeId={activeId} />
 
                     {/* Support Link */}
                     <Link
@@ -396,6 +370,7 @@ function Navbar() {
                             {link.label}
                         </a>
                     ))}
+                    <LoginLink isMobile={true} i={NAV_LINKS.length} onClick={closeMenu} menuOpen={menuOpen} />
                 </div>
 
                 <div

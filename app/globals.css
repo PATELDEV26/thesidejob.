@@ -136,24 +136,87 @@ body::after {
 /* Mobile cursor hide */
 /* Mobile cursor - default everywhere */
 
-/* Nav link underline */
 .nav-link {
   position: relative;
+  color: #555;
+  text-decoration: none;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+  padding-bottom: 4px;
+  display: inline-block;
 }
+
 .nav-link::after {
-  content: "";
+  content: '';
   position: absolute;
-  bottom: -4px;
+  bottom: 0;
   left: 0;
-  width: 100%;
+  width: 0%;
   height: 1px;
-  background: var(--red);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: #FF3B30;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.nav-link:hover {
+  color: #ffffff;
+}
+
 .nav-link:hover::after {
-  transform: scaleX(1);
+  width: 100%;
+}
+
+.nav-link.active {
+  color: #ffffff;
+}
+
+.nav-link.active::after {
+  width: 100%;
+  background: #FF3B30;
+}
+
+.nav-link-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nav-cta-btn {
+  margin-left: 16px;
+  font-family: var(--font-syne);
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 24px;
+  border: 1px solid #333;
+  border-radius: 999px;
+  background: transparent;
+  transition: all 0.25s ease;
+}
+
+.nav-cta-btn:hover {
+  background: #fff;
+  color: #000;
+  transform: scale(1.03);
+}
+
+.logo-dot {
+  display: inline-block;
+  color: #FF3B30;
+  transition: transform 0.3s ease;
+}
+
+@keyframes dotPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.8); }
+  100% { transform: scale(1); }
+}
+
+.logo-container:hover .logo-dot {
+  animation: dotPop 0.4s ease forwards;
 }
 
 /* Terminal blink cursor */

@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 interface LoginModalProps {
-    onSuccess: () => void;
+    onSuccess: (username?: string) => void;
     onClose: () => void;
 }
 
@@ -63,11 +63,31 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         setIsSubmitting(true);
         setError("");
 
-        const { error: insertError } = await supabase.from("profiles").insert([{
-            id: user.id,
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            setError("Authentication session lost. Please reload.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        const { data: existing } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('username', username.trim())
+            .single();
+
+        if (existing) {
+            setError('Username already taken. Choose another.');
+            setIsSubmitting(false);
+            return;
+        }
+
+        const { error: insertError } = await supabase.from("profiles").upsert([{
+            id: session.user.id,
             username: username.trim(),
-            email: user.email
-        }]);
+            email: session.user.email,
+            created_at: new Date().toISOString()
+        }], { onConflict: 'id' });
 
         setIsSubmitting(false);
 
@@ -81,7 +101,7 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         }
 
         // Profile created successfully!
-        onSuccess();
+        onSuccess(username.trim());
     };
 
     // Close on overlay click

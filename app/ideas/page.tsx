@@ -1,217 +1,243 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import LoginModal from "@/components/ui/LoginModal";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function IdeasPage() {
-    const router = useRouter();
-    const [ideaTitle, setIdeaTitle] = useState("");
-    const [ideaDesc, setIdeaDesc] = useState("");
-    const [ideaName, setIdeaName] = useState("");
-    const [ideaEmail, setIdeaEmail] = useState("");
-    const [ideaPhone, setIdeaPhone] = useState("");
-    const [ideaSubmitting, setIdeaSubmitting] = useState(false);
-    const [ideaSuccess, setIdeaSuccess] = useState(false);
-
     const { user, profile, loading } = useAuth();
-    const [showLogin, setShowLogin] = useState(false);
+    const router = useRouter();
 
-    useEffect(() => {
-        if (!loading && !user) {
-            setShowLogin(true);
-        } else if (user) {
-            if (profile?.username) setIdeaName(profile.username);
-            if (user.email) setIdeaEmail(user.email);
-        }
-    }, [user, profile, loading]);
+    const [emailStr, setEmailStr] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-    const submitIdea = async () => {
-        if (!ideaTitle.trim() || !ideaDesc.trim() || !ideaEmail.trim()) {
-            alert("Please fill in the required fields: Title, Description, and Email.");
-            return;
-        }
+    // Form states
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [phone, setPhone] = useState("");
+    const [formSubmitted, setFormSubmitted] = useState(false);
 
-        setIdeaSubmitting(true);
-        const { error } = await supabase.from("ideas").insert([
-            {
-                title: ideaTitle,
-                description: ideaDesc,
-                name: ideaName || "Anonymous",
-                email: ideaEmail,
-                phone: ideaPhone,
-                submitted_by: ideaName || "Anonymous",
-                status: "ideas", // Match admin board default
-            }
-        ]);
-        setIdeaSubmitting(false);
+    const handleSendMagicLink = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!emailStr.trim() || !emailStr.includes("@")) return;
+        setIsSubmitting(true);
 
-        if (error) {
-            console.error("Error submitting idea:", error);
-            alert("Oops! Something went wrong saving your idea.");
-        } else {
-            setIdeaSuccess(true);
-            setTimeout(() => {
-                router.push("/");
-            }, 3000);
-        }
+        const { error } = await supabase.auth.signInWithOtp({
+            email: emailStr,
+            options: { emailRedirectTo: 'https://thesidejob.tech/ideas' }
+        });
+
+        setIsSubmitting(false);
+        if (!error) setMagicLinkSent(true);
     };
 
+    const handleDropIdea = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim() || !description.trim() || !user || !profile) return;
+        setIsSubmitting(true);
+
+        const { error } = await supabase.from('ideas').insert([{
+            title: title.trim(),
+            description: description.trim(),
+            submitted_by: profile.username,
+            email: user.email,
+            phone: phone.trim() || null,
+            status: 'ideas'
+        }]);
+
+        setIsSubmitting(false);
+        if (!error) setFormSubmitted(true);
+    };
+
+    if (loading) {
+        return <div style={{ background: "#000", height: "100vh" }} />;
+    }
+
     return (
-        <div style={{ background: "#000", minHeight: "100vh", position: "relative", zIndex: 1 }}>
-            {/* Show login modal if unauthenticated */}
-            {showLogin && (
-                <LoginModal
-                    onSuccess={() => setShowLogin(false)}
-                    onClose={() => router.push("/")}
-                />
-            )}
+        <div style={{ background: "#000", minHeight: "100vh", paddingTop: "120px", paddingBottom: "120px" }}>
+            {(!user || !profile) ? (
+                // NOT LOGGED IN STATE
+                <div style={{ padding: "0 8vw", textAlign: "center", maxWidth: 800, margin: "0 auto" }}>
+                    <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#FF3B30", letterSpacing: 4, textTransform: "uppercase", marginBottom: 24 }}>
+                        // SHARE YOUR VISION
+                    </div>
+                    <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: "clamp(48px, 7vw, 96px)", color: "#fff", lineHeight: 1, margin: "0 0 24px" }}>
+                        Got a crazy Idea<span style={{ color: "#FF3B30" }}>?</span>
+                    </h1>
+                    <p style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#555", maxWidth: 560, margin: "0 auto 48px", lineHeight: 1.6 }}>
+                        The best ideas get invited to the Hacker House. Log in first to drop your idea.
+                    </p>
 
-            {/* Fixed top nav */}
-            <nav
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    zIndex: 1000,
-                    background: "rgba(0,0,0,0.9)",
-                    backdropFilter: "blur(20px)",
-                    borderBottom: "1px solid #111",
-                    padding: "20px 48px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                }}
-            >
-                <Link
-                    href="/"
-                    style={{
-                        fontFamily: "var(--font-syne)",
-                        fontWeight: 900,
-                        fontSize: 18,
-                        color: "#fff",
-                        textDecoration: "none",
-                    }}
-                >
-                    Thesidejob<span style={{ color: "#FF3B30" }}>.</span>
-                </Link>
-                <Link
-                    href="/"
-                    style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 11,
-                        color: "#555",
-                        textDecoration: "none",
-                        transition: "color 0.3s ease",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-                >
-                    ← Main Site
-                </Link>
-            </nav>
-
-            <div style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                minHeight: "100vh", padding: "120px 20px 40px"
-            }}>
-                <div style={{
-                    background: "#0a0a0a", border: "1px solid #1a1a1a", boxSizing: "border-box",
-                    padding: "40px", width: "100%", maxWidth: 560, position: "relative"
-                }}>
-                    {ideaSuccess ? (
-                        <div style={{ textAlign: "center", padding: "60px 0" }}>
-                            <div style={{ fontSize: 48, marginBottom: 20 }}>🚀</div>
-                            <h2 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 28, color: "#fff", marginBottom: 16 }}>
-                                Idea submitted.
-                            </h2>
-                            <p style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#32D74B" }}>
-                                We'll be in touch. Watch your inbox. Redirecting...
-                            </p>
+                    {magicLinkSent ? (
+                        <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#32D74B", padding: 20 }}>
+                            Magic link sent. Check your email.
                         </div>
                     ) : (
-                        <>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#FF3B30", marginBottom: 8 }}>// Drop Your Idea</div>
-                            <h2 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 28, color: "#fff", margin: "0 0 16px" }}>
-                                Got something worth building?
-                            </h2>
-                            <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", marginBottom: 32, lineHeight: 1.6 }}>
-                                Share your idea with the Thesidejob team. The best ideas get invited to the Hacker House every weekend.
-                            </p>
-
-                            <div style={{ display: "grid", gap: 20 }}>
-                                <div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>IDEA TITLE *</div>
-                                    <input value={ideaTitle} onChange={e => setIdeaTitle(e.target.value)}
-                                        placeholder="Eg: Smart contract auditor for Solana"
-                                        style={{ width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #222", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s" }}
-                                        onFocus={e => e.target.style.borderColor = "#FF3B30"}
-                                        onBlur={e => e.target.style.borderColor = "#222"}
-                                    />
-                                </div>
-                                <div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>WHAT ARE YOU BUILDING *</div>
-                                    <textarea value={ideaDesc} onChange={e => setIdeaDesc(e.target.value)} rows={4}
-                                        placeholder="Describe your idea in detail..."
-                                        style={{ width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #222", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "vertical", transition: "border-color 0.2s" }}
-                                        onFocus={e => e.target.style.borderColor = "#FF3B30"}
-                                        onBlur={e => e.target.style.borderColor = "#222"}
-                                    />
-                                </div>
-                                <div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>YOUR NAME</div>
-                                    <input value={ideaName} onChange={e => setIdeaName(e.target.value)}
-                                        placeholder="Dhariya Patel"
-                                        style={{ width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #222", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s" }}
-                                        onFocus={e => e.target.style.borderColor = "#FF3B30"}
-                                        onBlur={e => e.target.style.borderColor = "#222"}
-                                    />
-                                </div>
-                                <div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>YOUR EMAIL *</div>
-                                    <input value={ideaEmail} onChange={e => setIdeaEmail(e.target.value)} type="email"
-                                        placeholder="john@example.com"
-                                        style={{ width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #222", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s" }}
-                                        onFocus={e => e.target.style.borderColor = "#FF3B30"}
-                                        onBlur={e => e.target.style.borderColor = "#222"}
-                                    />
-                                </div>
-                                <div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", marginBottom: 8, letterSpacing: 1 }}>YOUR PHONE (OPTIONAL)</div>
-                                    <input value={ideaPhone} onChange={e => setIdeaPhone(e.target.value)} type="tel"
-                                        placeholder="+91 XXXXX XXXXX"
-                                        style={{ width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #222", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s" }}
-                                        onFocus={e => e.target.style.borderColor = "#FF3B30"}
-                                        onBlur={e => e.target.style.borderColor = "#222"}
-                                    />
-                                </div>
-                                <button onClick={submitIdea} disabled={ideaSubmitting} style={{
-                                    width: "100%", padding: "16px", background: "#FF3B30", border: "none", color: "#fff",
-                                    fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 14, cursor: ideaSubmitting ? "not-allowed" : "pointer",
-                                    marginTop: 8, transition: "background 0.2s"
+                        <form onSubmit={handleSendMagicLink} style={{ maxWidth: 400, margin: "0 auto" }}>
+                            <input
+                                type="email"
+                                value={emailStr}
+                                onChange={e => setEmailStr(e.target.value)}
+                                placeholder="your@email.com"
+                                style={{
+                                    width: "100%",
+                                    background: "transparent",
+                                    border: "none",
+                                    borderBottom: "1px solid #333",
+                                    color: "#fff",
+                                    fontFamily: "var(--font-space-mono), monospace",
+                                    fontSize: 14,
+                                    padding: "16px 0",
+                                    outline: "none",
+                                    boxSizing: "border-box",
+                                    transition: "border-color 0.3s"
                                 }}
-                                    onMouseEnter={(e) => {
-                                        if (!ideaSubmitting) e.currentTarget.style.background = "#e0332a"
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!ideaSubmitting) e.currentTarget.style.background = "#FF3B30"
-                                    }}
-                                >
-                                    {ideaSubmitting ? "Submitting..." : "Submit Idea →"}
-                                </button>
-                            </div>
-                        </>
+                                onFocus={(e) => (e.currentTarget.style.borderColor = "#FF3B30")}
+                                onBlur={(e) => (e.currentTarget.style.borderColor = "#333")}
+                            />
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || !emailStr.trim()}
+                                style={{
+                                    background: "#FF3B30",
+                                    color: "#000",
+                                    fontFamily: "var(--font-syne)",
+                                    fontWeight: 900,
+                                    fontSize: 14,
+                                    padding: "18px 36px",
+                                    border: "none",
+                                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                                    marginTop: 32,
+                                    opacity: isSubmitting ? 0.7 : 1,
+                                    textTransform: "uppercase",
+                                    letterSpacing: 2
+                                }}
+                            >
+                                {isSubmitting ? "Sending..." : "Send Login Link →"}
+                            </button>
+                        </form>
                     )}
                 </div>
-            </div>
+            ) : (
+                // LOGGED IN STATE
+                <div style={{ padding: "0 8vw" }}>
+                    <div style={{ textAlign: "center", marginBottom: 64 }}>
+                        <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#FF3B30", letterSpacing: 4, textTransform: "uppercase", marginBottom: 24 }}>
+                            // SHARE YOUR VISION
+                        </div>
+                        <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: "clamp(48px, 7vw, 96px)", color: "#fff", lineHeight: 1, margin: 0 }}>
+                            Got a crazy Idea<span style={{ color: "#FF3B30" }}>?</span>
+                        </h1>
+                    </div>
+
+                    <div style={{ maxWidth: 680, margin: "0 auto", background: "#0a0a0a", border: "1px solid #1a1a1a", padding: "48px", boxSizing: "border-box" }}>
+                        {formSubmitted ? (
+                            <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#32D74B", textAlign: "center", padding: "40px 0" }}>
+                                Idea dropped. We'll be in touch.
+                            </div>
+                        ) : (
+                            <form onSubmit={handleDropIdea} style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+                                <div>
+                                    <label style={{ display: "block", fontFamily: "var(--font-space-mono), monospace", fontSize: 10, color: "#FF3B30", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+                                        IDEA TITLE
+                                    </label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={title}
+                                        onChange={e => setTitle(e.target.value)}
+                                        style={{
+                                            width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #222",
+                                            color: "#fff", fontFamily: "var(--font-space-mono), monospace", fontSize: 13, padding: "12px 0",
+                                            outline: "none", boxSizing: "border-box", transition: "border-color 0.3s"
+                                        }}
+                                        onFocus={(e) => (e.currentTarget.style.borderColor = "#FF3B30")}
+                                        onBlur={(e) => (e.currentTarget.style.borderColor = "#222")}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontFamily: "var(--font-space-mono), monospace", fontSize: 10, color: "#FF3B30", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+                                        WHAT ARE YOU BUILDING
+                                    </label>
+                                    <textarea
+                                        required
+                                        rows={5}
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                        style={{
+                                            width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #222",
+                                            color: "#fff", fontFamily: "var(--font-space-mono), monospace", fontSize: 13, padding: "12px 0",
+                                            outline: "none", boxSizing: "border-box", transition: "border-color 0.3s", resize: "vertical"
+                                        }}
+                                        onFocus={(e) => (e.currentTarget.style.borderColor = "#FF3B30")}
+                                        onBlur={(e) => (e.currentTarget.style.borderColor = "#222")}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontFamily: "var(--font-space-mono), monospace", fontSize: 10, color: "#FF3B30", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+                                        YOUR NAME
+                                    </label>
+                                    <input
+                                        readOnly
+                                        value={profile.username || ""}
+                                        style={{
+                                            width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #222",
+                                            color: "#888", fontFamily: "var(--font-space-mono), monospace", fontSize: 13, padding: "12px 0",
+                                            outline: "none", boxSizing: "border-box"
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontFamily: "var(--font-space-mono), monospace", fontSize: 10, color: "#FF3B30", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+                                        YOUR EMAIL
+                                    </label>
+                                    <input
+                                        readOnly
+                                        value={user.email || ""}
+                                        style={{
+                                            width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #222",
+                                            color: "#888", fontFamily: "var(--font-space-mono), monospace", fontSize: 13, padding: "12px 0",
+                                            outline: "none", boxSizing: "border-box"
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontFamily: "var(--font-space-mono), monospace", fontSize: 10, color: "#FF3B30", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>
+                                        YOUR PHONE
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={e => setPhone(e.target.value)}
+                                        style={{
+                                            width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #222",
+                                            color: "#fff", fontFamily: "var(--font-space-mono), monospace", fontSize: 13, padding: "12px 0",
+                                            outline: "none", boxSizing: "border-box", transition: "border-color 0.3s"
+                                        }}
+                                        onFocus={(e) => (e.currentTarget.style.borderColor = "#FF3B30")}
+                                        onBlur={(e) => (e.currentTarget.style.borderColor = "#222")}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !title.trim() || !description.trim()}
+                                    style={{
+                                        width: "100%", height: 56, background: "#FF3B30", color: "#000",
+                                        fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 16, border: "none",
+                                        cursor: (isSubmitting || !title.trim() || !description.trim()) ? "not-allowed" : "pointer",
+                                        marginTop: 16, opacity: (isSubmitting || !title.trim() || !description.trim()) ? 0.7 : 1,
+                                        textTransform: "uppercase", letterSpacing: 2
+                                    }}
+                                >
+                                    {isSubmitting ? "Dropping..." : "Drop Your Idea →"}
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

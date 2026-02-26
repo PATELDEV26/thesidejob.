@@ -45,5 +45,5 @@ export function useAuth() {
         return admins.includes(email);
     };
 
-    return { user, profile, loading, isAdmin };
+    return { user, profile, setProfile, loading, isAdmin };
 }

@@ -63,7 +63,7 @@ function getNextFridayAndSunday() {
 }
 
 export default function CommunityPage() {
-    const { user, profile, loading, isAdmin } = useAuth();
+    const { user, profile, setProfile, loading, isAdmin } = useAuth();
 
     const [activeChannel, setActiveChannel] = useState<string>("introduction");
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -344,7 +344,11 @@ export default function CommunityPage() {
             {/* LOGIN MODAL */}
             {requireAuth && (
                 <LoginModal
-                    onSuccess={() => { }}
+                    onSuccess={(newUsername?: string) => {
+                        if (newUsername && user) {
+                            setProfile({ id: user.id, username: newUsername, email: user.email });
+                        }
+                    }}
                     onClose={() => {
                         if (!user || !profile) window.location.href = "/";
                     }}
