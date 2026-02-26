@@ -10,11 +10,11 @@ const QUICK_EMOJIS = ["😀", "😂", "🔥", "❤️", "👍", "👎", "🎉", 
 
 interface Message {
     id: string;
-    sender: string;
-    avatar: string;
-    text: string;
-    time: string;
-    channel?: string;
+    content: string;
+    sender_name?: string;
+    username?: string;
+    created_at: string;
+    message_channel?: string;
     room_id?: string;
 }
 
@@ -154,23 +154,23 @@ export default function CommunityPage() {
             const { data, error } = await supabase
                 .from('messages')
                 .select('*')
-                .eq('channel', activeChannel)
+                .eq('message_channel', activeChannel)
                 .order('created_at', { ascending: true })
                 .limit(100);
 
-            if (data) setMessages(data);
+            if (data) setMessages(data as any[]);
             if (error) console.error('Fetch error:', error);
         };
 
         fetchMessages();
 
         const sub = supabase
-            .channel(`room-${activeChannel}`)
+            .channel(`chat-${activeChannel}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: `channel=eq.${activeChannel}`
+                filter: `message_channel=eq.${activeChannel}`
             }, (payload) => {
                 setMessages(prev => [...prev, payload.new as any]);
             })
@@ -236,22 +236,26 @@ export default function CommunityPage() {
     const sendMessage = async () => {
         if (!input.trim() || !profile) return;
 
-        const messageData = {
-            channel: activeChannel,
-            username: profile.username,
-            content: input.trim(),
-            created_at: new Date().toISOString()
-        };
-
+        const content = input.trim();
         setInput('');
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('messages')
-            .insert(messageData);
+            .insert({
+                content: content,
+                sender_name: profile.username,
+                username: profile.username,
+                message_channel: activeChannel,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
         if (error) {
             console.error('Send error:', error);
-            setInput(messageData.content);
+            setInput(content);
+        } else {
+            setMessages(prev => [...prev, data as any]);
         }
     };
 
@@ -581,8 +585,12 @@ export default function CommunityPage() {
                         <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", textAlign: "center", padding: "40px" }}>
                             No messages here yet. Be the first to say hi!
                         </div>
-                    ) : messages.map((msg, i) => {
-                        const isNewSender = i === 0 || messages[i - 1].sender !== msg.sender;
+                    ) : messages.map((msg: any, i) => {
+                        const currentSender = msg.sender_name || msg.username || "Anonymous";
+                        const prevSender = i === 0 ? null : (messages[i - 1] as any).sender_name || (messages[i - 1] as any).username || "Anonymous";
+                        const isNewSender = i === 0 || prevSender !== currentSender;
+                        const msgTime = new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+
                         return (
                             <div key={msg.id} style={{
                                 display: "flex", gap: 16, padding: isNewSender ? "16px 0 4px" : "4px 0", paddingLeft: isNewSender ? 0 : 52,
@@ -593,21 +601,21 @@ export default function CommunityPage() {
                                 {isNewSender && (
                                     <div style={{
                                         width: 36, height: 36, borderRadius: "50%",
-                                        background: msg.sender === displayName
+                                        background: currentSender === displayName
                                             ? "linear-gradient(135deg, #FF3B30, #7a0000)"
-                                            : `linear-gradient(135deg, #${Math.abs(msg.sender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
+                                            : `linear-gradient(135deg, #${Math.abs(currentSender.charCodeAt(0) * 123456).toString(16).slice(0, 6)}, #333)`,
                                         display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 10, color: "#fff", flexShrink: 0,
-                                    }}>{msg.avatar}</div>
+                                    }}>{getInitials(currentSender)}</div>
                                 )}
                                 <div style={{ flex: 1 }}>
                                     {isNewSender && (
                                         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                                            <span style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 14, color: "#fff" }}>{msg.sender}</span>
-                                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#333" }}>{msg.time}</span>
+                                            <span style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 14, color: "#fff" }}>{currentSender}</span>
+                                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#333" }}>{msgTime}</span>
                                         </div>
                                     )}
                                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#ccc", lineHeight: 1.7 }}>
-                                        {formatText(msg.text, onlineUsers)}
+                                        {formatText(msg.content || "", onlineUsers)}
                                     </div>
                                 </div>
                             </div>
