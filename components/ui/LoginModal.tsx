@@ -85,8 +85,7 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         const { error: insertError } = await supabase.from("profiles").upsert([{
             id: session.user.id,
             username: username.trim(),
-            email: session.user.email,
-            created_at: new Date().toISOString()
+            email: session.user.email
         }], { onConflict: 'id' });
 
         setIsSubmitting(false);
