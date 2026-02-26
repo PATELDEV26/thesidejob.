@@ -91,11 +91,13 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
 
         setIsSubmitting(false);
 
+        console.log("Supabase insert error response:", insertError);
+
         if (insertError) {
             if (insertError.code === "23505") { // Unique violation
                 setError("This username is already taken.");
             } else {
-                setError("Failed to create profile. Try again.");
+                setError(`Failed to create profile: ${insertError.message || insertError.code}`);
             }
             return;
         }
