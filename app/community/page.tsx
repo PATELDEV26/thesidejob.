@@ -332,7 +332,7 @@ export default function CommunityPage() {
     }
 
     return (
-        <div style={{ display: "flex", height: "100vh", background: "#000", overflow: "hidden", position: "relative" }}>
+        <div className="chat-container" style={{ display: "flex", background: "#000", overflow: "hidden", position: "relative" }}>
 
             {/* LOGIN MODAL */}
             {requireAuth && (
@@ -562,7 +562,7 @@ export default function CommunityPage() {
             </div>
 
             {/* ─── Main Content ─── */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
+            <div className="chat-container" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
                 <div style={{
                     height: 64, background: "#050505", borderBottom: "1px solid #111",
                     padding: "0 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
@@ -641,7 +641,7 @@ export default function CommunityPage() {
                     <div ref={chatEndRef} />
                 </div>
 
-                <div style={{ height: 80, background: "#050505", borderTop: "1px solid #111", padding: "0 32px", display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+                <div className="chat-input-bar" style={{ height: 80, background: "#050505", borderTop: "1px solid #111", padding: "0 32px", display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
                     <div style={{ position: "relative", flex: 1 }}>
                         <input ref={inputRef} type="text" value={input}
                             onChange={handleInputChange} onKeyDown={handleKeyDown}
@@ -718,6 +718,10 @@ export default function CommunityPage() {
             </div>
 
             <style jsx>{`
+                .chat-container {
+                    height: 100vh;
+                    height: calc(-webkit-fill-available);
+                }
                 .chat-messages::-webkit-scrollbar { width: 4px; }
                 .chat-messages::-webkit-scrollbar-track { background: #111; }
                 .chat-messages::-webkit-scrollbar-thumb { background: #222; }
@@ -727,6 +731,8 @@ export default function CommunityPage() {
                     .back-text { display: none; }
                 }
                 @media (max-width: 768px) {
+                    .chat-input-bar { padding: 12px 16px !important; height: auto !important; min-height: 70px; }
+                    .chat-messages { padding: 0 16px 16px !important; }
                     .left-sidebar { position: absolute !important; left: -280px; top: 0; bottom: 0; transition: transform 0.3s ease !important; }
                     .left-sidebar.open { transform: translateX(280px); }
                     .mobile-sidebar-toggle { display: flex !important; }

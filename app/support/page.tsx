@@ -94,6 +94,7 @@ export default function SupportPage() {
         <div style={{ background: "#000", minHeight: "100vh" }}>
             {/* Fixed top nav for Support page */}
             <nav
+                className="support-nav"
                 style={{
                     position: "fixed",
                     top: 0,
@@ -138,6 +139,7 @@ export default function SupportPage() {
             </nav>
 
             <div
+                className="support-wrapper"
                 style={{
                     maxWidth: 680,
                     margin: "0 auto",
@@ -160,6 +162,7 @@ export default function SupportPage() {
 
                 {/* Headline */}
                 <div
+                    className="support-headline"
                     style={{
                         fontFamily: "var(--font-syne)",
                         fontWeight: 900,
@@ -672,6 +675,11 @@ export default function SupportPage() {
                 }
                 input::placeholder {
                     color: #333;
+                }
+                @media (max-width: 768px) {
+                    .support-wrapper { padding: 100px 16px 60px !important; }
+                    .support-nav { padding: 16px 20px !important; }
+                    .support-headline { font-size: clamp(40px, 10vw, 60px) !important; }
                 }
                 @media (max-width: 600px) {
                     .support-card {

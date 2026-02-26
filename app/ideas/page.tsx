@@ -24,9 +24,13 @@ export default function IdeasPage() {
         if (!emailStr.trim() || !emailStr.includes("@")) return;
         setIsSubmitting(true);
 
+        const redirectUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : 'https://thesidejob.tech/auth/callback';
+
         const { error } = await supabase.auth.signInWithOtp({
             email: emailStr,
-            options: { emailRedirectTo: 'https://thesidejob.tech/ideas' }
+            options: { emailRedirectTo: redirectUrl }
         });
 
         setIsSubmitting(false);
@@ -122,7 +126,7 @@ export default function IdeasPage() {
                 </div>
             ) : (
                 // LOGGED IN STATE
-                <div style={{ padding: "0 8vw" }}>
+                <div className="ideas-page-wrapper" style={{ padding: "0 8vw" }}>
                     <div style={{ textAlign: "center", marginBottom: 64 }}>
                         <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 11, color: "#FF3B30", letterSpacing: 4, textTransform: "uppercase", marginBottom: 24 }}>
                             // SHARE YOUR VISION
@@ -132,7 +136,7 @@ export default function IdeasPage() {
                         </h1>
                     </div>
 
-                    <div style={{ maxWidth: 680, margin: "0 auto", background: "#0a0a0a", border: "1px solid #1a1a1a", padding: "48px", boxSizing: "border-box" }}>
+                    <div className="ideas-form-card" style={{ maxWidth: 680, width: "100%", margin: "0 auto", background: "#0a0a0a", border: "1px solid #1a1a1a", padding: "48px", boxSizing: "border-box" }}>
                         {formSubmitted ? (
                             <div style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: 13, color: "#32D74B", textAlign: "center", padding: "40px 0" }}>
                                 Idea dropped. We'll be in touch.
@@ -238,6 +242,17 @@ export default function IdeasPage() {
                     </div>
                 </div>
             )}
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    .ideas-page-wrapper {
+                        padding: 0 16px !important;
+                    }
+                    .ideas-form-card {
+                        padding: 24px !important;
+                        max-width: 100% !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

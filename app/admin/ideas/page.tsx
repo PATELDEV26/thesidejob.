@@ -193,11 +193,11 @@ export default function AdminIdeaBoard() {
 
     return (
         <div style={{ background: "#000", minHeight: "100vh", color: "#fff", padding: "80px 0 40px 0" }}>
-            <div style={{ padding: "0 40px", marginBottom: 32 }}>
+            <div className="admin-header" style={{ padding: "0 40px", marginBottom: 32 }}>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#FF3B30", marginBottom: 8 }}>// Idea Board</div>
                 <h1 style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 48, margin: 0 }}>Submitted Ideas</h1>
 
-                <div style={{ display: "flex", gap: 32, marginTop: 24, borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", padding: "16px 0" }}>
+                <div className="admin-stats-card" style={{ display: "flex", gap: 32, marginTop: 24, borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", padding: "16px 0" }}>
                     <div>
                         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#555", letterSpacing: 2 }}>TOTAL IDEAS</div>
                         <div style={{ fontFamily: "var(--font-syne)", fontWeight: 800, fontSize: 24 }}>{ideas.length}</div>
@@ -213,7 +213,7 @@ export default function AdminIdeaBoard() {
                 </div>
             </div>
 
-            <div style={{ padding: "0 40px", overflowX: "auto" }}>
+            <div className="admin-board" style={{ padding: "0 40px", overflowX: "auto" }}>
                 <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
                         {COLUMNS.map(col => {
@@ -249,6 +249,12 @@ export default function AdminIdeaBoard() {
                     </div>
                 </DndContext>
             </div>
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    .admin-header, .admin-board { padding: 0 16px !important; }
+                    .admin-stats-card { flex-wrap: wrap; gap: 16px !important; }
+                }
+            `}</style>
         </div>
     );
 }

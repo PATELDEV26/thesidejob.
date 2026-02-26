@@ -126,6 +126,7 @@ export default function Hero() {
     return (
         <section
             id="hero"
+            className="full-height"
             style={{
                 position: "relative",
                 minHeight: "100vh",
@@ -167,6 +168,21 @@ export default function Hero() {
                     }
                     .hero-terminal-col {
                         display: none !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .hero-grid {
+                        padding-left: 24px !important;
+                    }
+                    .hero-buttons {
+                        flex-direction: column !important;
+                        width: 100%;
+                        gap: 12px !important;
+                    }
+                    .hero-buttons > a {
+                        width: 100%;
+                        text-align: center;
+                        box-sizing: border-box;
                     }
                 }
                 @media (max-width: 480px) {
@@ -220,7 +236,7 @@ export default function Hero() {
                                 style={{
                                     fontFamily: "var(--font-syne)",
                                     fontWeight: 900,
-                                    fontSize: "clamp(72px, 11vw, 160px)",
+                                    fontSize: "clamp(52px, 14vw, 160px)",
                                     letterSpacing: -4,
                                     lineHeight: 0.88,
                                     color: "#fff",
@@ -264,6 +280,7 @@ export default function Hero() {
 
                     {/* Buttons */}
                     <div
+                        className="hero-buttons"
                         style={{
                             display: "flex",
                             gap: 16,

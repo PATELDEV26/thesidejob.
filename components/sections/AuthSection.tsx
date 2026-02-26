@@ -19,10 +19,14 @@ export default function AuthSection() {
         setStatus("loading");
         setErrorMsg("");
 
+        const redirectUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : 'https://thesidejob.tech/auth/callback';
+
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
-                emailRedirectTo: window.location.origin
+                emailRedirectTo: redirectUrl
             }
         });
 

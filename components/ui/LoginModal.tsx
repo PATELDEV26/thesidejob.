@@ -39,10 +39,14 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         setIsSubmitting(true);
         setError("");
 
+        const redirectUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : 'https://thesidejob.tech/auth/callback';
+
         const { error: signInError } = await supabase.auth.signInWithOtp({
             email,
             options: {
-                emailRedirectTo: window.location.origin
+                emailRedirectTo: redirectUrl
             }
         });
 

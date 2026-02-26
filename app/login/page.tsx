@@ -25,9 +25,13 @@ export default function LoginPage() {
         if (!email.trim() || !email.includes("@")) return;
         setIsSubmitting(true);
 
+        const redirectUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : 'https://thesidejob.tech/auth/callback';
+
         const { error } = await supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: 'https://thesidejob.tech/ideas' }
+            options: { emailRedirectTo: redirectUrl }
         });
 
         setIsSubmitting(false);

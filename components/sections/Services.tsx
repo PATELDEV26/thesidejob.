@@ -190,19 +190,21 @@ export default function Services() {
             <style jsx>{`
                 @media (max-width: 768px) {
                     .services-section {
-                        padding: 80px 6vw !important;
+                        padding: 80px 24px !important;
                     }
                     .service-row {
-                        flex-wrap: wrap;
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
                         gap: 12px !important;
-                        padding: 28px 0 !important;
+                        padding: 32px 0 !important;
                     }
                     .srv-desc {
                         max-width: 100% !important;
-                        order: 4;
+                        order: unset !important;
+                        margin-top: 8px;
                     }
                     .srv-arrow {
-                        margin-left: auto;
+                        display: none !important;
                     }
                 }
             `}</style>
