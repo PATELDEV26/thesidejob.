@@ -12,7 +12,8 @@ const PROJECTS = [
         name: "VelocityShare",
         desc: "A next-generation file sharing and collaboration platform built for teams that move fast. Featuring real-time sync and end-to-end encryption.",
         status: "Live" as const,
-        hideView: true,
+        hideView: false,
+        githubUrl: "https://github.com/thesidejobfive-png/VelociatyShare",
     },
     {
         monogram: "HHI",
@@ -47,7 +48,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[0]; index: n
         return () => ctx.revert();
     }, [index]);
 
-    return (
+    const cardContent = (
         <div
             ref={cardRef}
             style={{
@@ -182,7 +183,18 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[0]; index: n
                     </div>
 
                     {/* View link */}
-                    {!project.hideView && (
+                    {!project.hideView && project.githubUrl ? (
+                        <span
+                            style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 11,
+                                color: "#FF3B30",
+                                transition: "color 0.3s ease",
+                            }}
+                        >
+                            View on GitHub ↗
+                        </span>
+                    ) : !project.hideView && (
                         <span
                             style={{
                                 fontFamily: "var(--font-mono)",
@@ -198,6 +210,21 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[0]; index: n
             </div>
         </div>
     );
+
+    if (project.githubUrl) {
+        return (
+            <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none', display: 'block', cursor: 'pointer' }}
+            >
+                {cardContent}
+            </a>
+        );
+    }
+
+    return cardContent;
 }
 
 export default function OurWork() {

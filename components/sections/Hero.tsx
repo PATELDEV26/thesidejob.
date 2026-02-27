@@ -235,7 +235,14 @@ export default function Hero() {
                         }}
                     >
                         <a
-                            href="#our-work"
+                            href="/#work"
+                            onClick={(e) => {
+                                if (window.location.pathname === '/') {
+                                    e.preventDefault()
+                                    const el = document.getElementById('work')
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' })
+                                }
+                            }}
                             style={{
                                 background: "#FF3B30",
                                 color: "#000",
@@ -253,8 +260,15 @@ export default function Hero() {
                             See Our Work →
                         </a>
                         <a
-                            href="#services"
+                            href="/#services"
                             className="hero-secondary-btn"
+                            onClick={(e) => {
+                                if (window.location.pathname === '/') {
+                                    e.preventDefault()
+                                    const el = document.getElementById('services')
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' })
+                                }
+                            }}
                             style={{
                                 background: "transparent",
                                 color: "#fff",
