@@ -531,18 +531,22 @@ export default function SupportPage() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        padding: "24px",
                     }}
                 >
                     <div
                         style={{
                             background: "#0a0a0a",
                             border: "1px solid #1a1a1a",
-                            padding: 48,
-                            maxWidth: 400,
-                            width: "90%",
+                            padding: "32px 24px",
+                            maxWidth: 360,
+                            width: "100%",
+                            maxHeight: "90vh",
+                            overflowY: "auto",
                             textAlign: "center",
                             position: "relative",
                         }}
+                        className="hide-scrollbar"
                     >
                         <button
                             onClick={() => setShowQR(false)}
@@ -580,9 +584,9 @@ export default function SupportPage() {
                             style={{
                                 fontFamily: "var(--font-syne)",
                                 fontWeight: 900,
-                                fontSize: 64,
+                                fontSize: 48,
                                 color: "#fff",
-                                marginBottom: 24,
+                                marginBottom: 16,
                             }}
                         >
                             ₹{selectedAmount}
@@ -591,14 +595,16 @@ export default function SupportPage() {
                         <img
                             src="/qr-code.jpeg"
                             alt="PhonePe QR Code"
-                            width={280}
                             style={{
                                 border: "4px solid #1a1a1a",
                                 borderRadius: 12,
                                 marginBottom: 16,
-                                maxWidth: "100%",
+                                width: "100%",
+                                maxWidth: 220,
                                 height: "auto",
-                                objectFit: "contain"
+                                objectFit: "contain",
+                                margin: "0 auto 16px auto",
+                                display: "block"
                             }}
                         />
 
@@ -666,11 +672,38 @@ export default function SupportPage() {
                         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#333", marginTop: 24 }}>
                             After paying, screenshot and share on Charcha #general — we'll shout you out 🔴
                         </div>
+
+                        <button
+                            onClick={() => setShowQR(false)}
+                            style={{
+                                marginTop: 24,
+                                background: "none",
+                                border: "1px solid #333",
+                                color: "#888",
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 12,
+                                padding: "12px 24px",
+                                width: "100%",
+                                cursor: "pointer",
+                                transition: "all 0.3s ease",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "#555"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = "#888"; e.currentTarget.style.borderColor = "#333"; }}
+                        >
+                            Cancel Payment
+                        </button>
                     </div>
                 </div>
             )}
 
             <style jsx>{`
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .hide-scrollbar {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                }
                 input[type="number"]::-webkit-inner-spin-button,
                 input[type="number"]::-webkit-outer-spin-button {
                     -webkit-appearance: none;
