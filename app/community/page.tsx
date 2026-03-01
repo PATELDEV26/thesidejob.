@@ -181,9 +181,13 @@ export default function CommunityPage() {
             }, (payload) => {
                 const newMsg = payload.new as any;
                 if (isRoom) {
-                    if (newMsg.room_id === activeRoomId) setMessages(prev => [...prev, newMsg]);
+                    if (newMsg.room_id === activeRoomId) {
+                        setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+                    }
                 } else {
-                    if (newMsg.message_channel === activeChannel && !newMsg.room_id) setMessages(prev => [...prev, newMsg]);
+                    if (newMsg.message_channel === activeChannel && !newMsg.room_id) {
+                        setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+                    }
                 }
             })
             .subscribe();
@@ -276,7 +280,7 @@ export default function CommunityPage() {
             console.error('Send error:', error);
             setInput(content);
         } else {
-            setMessages(prev => [...prev, data as any]);
+            setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as any]);
         }
     };
 
