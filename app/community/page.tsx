@@ -177,10 +177,14 @@ export default function CommunityPage() {
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
-                table: 'messages',
-                filter: `${filterKey}=eq.${filterValue}`
+                table: 'messages'
             }, (payload) => {
-                setMessages(prev => [...prev, payload.new as any]);
+                const newMsg = payload.new as any;
+                if (isRoom) {
+                    if (newMsg.room_id === activeRoomId) setMessages(prev => [...prev, newMsg]);
+                } else {
+                    if (newMsg.message_channel === activeChannel && !newMsg.room_id) setMessages(prev => [...prev, newMsg]);
+                }
             })
             .subscribe();
 
@@ -432,7 +436,9 @@ export default function CommunityPage() {
                         <button style={{
                             fontFamily: "var(--font-mono)", fontSize: 11, border: "1px solid #FF3B30", color: "#FF3B30",
                             background: "transparent", padding: "8px 16px", cursor: "pointer"
-                        }}>RSVP</button>
+                        }}
+                            onClick={() => alert("RSVP functionality coming soon! 🔴")}
+                        >RSVP</button>
                     </div>
 
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 3, color: "#333", textTransform: "uppercase", marginBottom: 12 }}>CHANNELS</div>
@@ -562,7 +568,7 @@ export default function CommunityPage() {
             </div>
 
             {/* ─── Main Content ─── */}
-            <div className="chat-container" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div className="main-chat-area" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
                 <div style={{
                     height: 64, background: "#050505", borderBottom: "1px solid #111",
                     padding: "0 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0,

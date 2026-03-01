@@ -125,13 +125,9 @@ export default function Services() {
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.background = "rgba(255,59,48,0.02)";
-                        const arrow = e.currentTarget.querySelector(".srv-arrow") as HTMLElement;
-                        if (arrow) arrow.style.color = "#FF3B30";
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.background = "transparent";
-                        const arrow = e.currentTarget.querySelector(".srv-arrow") as HTMLElement;
-                        if (arrow) arrow.style.color = "#333";
                     }}
                 >
                     {/* Number */}
@@ -172,18 +168,6 @@ export default function Services() {
                     >
                         {service.desc}
                     </span>
-
-                    {/* Arrow */}
-                    <span
-                        className="srv-arrow"
-                        style={{
-                            color: "#333",
-                            fontSize: 20,
-                            transition: "color 0.3s ease",
-                        }}
-                    >
-                        →
-                    </span>
                 </div>
             ))}
 
@@ -202,9 +186,6 @@ export default function Services() {
                         max-width: 100% !important;
                         order: unset !important;
                         margin-top: 8px;
-                    }
-                    .srv-arrow {
-                        display: none !important;
                     }
                 }
             `}</style>

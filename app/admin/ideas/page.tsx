@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { DndContext, DragEndEvent, useDroppable, useDraggable, closestCenter } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, useDroppable, useDraggable, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core'
 
 // Droppable column wrapper
 function DroppableColumn({ id, children, ...props }: any) {
@@ -112,6 +112,14 @@ export default function AdminIdeaBoard() {
     const [ideas, setIdeas] = useState<Idea[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
+
     useEffect(() => {
         const checkAdminAndFetch = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -119,7 +127,8 @@ export default function AdminIdeaBoard() {
                 'pateldev2317@gmail.com',
                 'girishguptaaditya@gmail.com',
                 'pateldhairya64@gmail.com',
-                'vaka2182003@gmail.com'
+                'vaka2182003@gmail.com',
+                'patelharshit735@gmail.com'
             ];
 
             if (!session?.user || !adminEmails.includes(session.user.email || "")) {
@@ -214,7 +223,7 @@ export default function AdminIdeaBoard() {
             </div>
 
             <div className="admin-board" style={{ padding: "0 40px", overflowX: "auto" }}>
-                <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <div style={{ display: "flex", gap: 24, minWidth: "max-content" }}>
                         {COLUMNS.map(col => {
                             const columnIdeas = ideas.filter(i => i.status === col.id);
