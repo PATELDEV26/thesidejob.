@@ -140,8 +140,12 @@ export default function CommunityPage() {
 
         const roomSub = supabase.channel('rooms')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_rooms' }, (payload) => {
-                setPrivateRooms(prev => [...prev, payload.new]);
-            }).subscribe();
+                setPrivateRooms(prev => prev.some((r: any) => r.id === payload.new.id) ? prev : [...prev, payload.new]);
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'private_rooms' }, (payload) => {
+                setPrivateRooms(prev => prev.filter((r: any) => r.id !== payload.old.id));
+            })
+            .subscribe();
 
         return () => { supabase.removeChannel(roomSub) };
     }, []);
@@ -237,15 +241,29 @@ export default function CommunityPage() {
 
     const handleCreateRoom = async () => {
         if (!newRoomName.trim() || !newRoomPasscode.trim() || !profile) return;
-        const { error } = await supabase.from("private_rooms").insert([{
+        const { data, error } = await supabase.from("private_rooms").insert([{
             name: newRoomName.trim(),
             passcode: newRoomPasscode.trim(),
             created_by: profile.username
-        }]);
-        if (!error) {
+        }]).select().single();
+        if (!error && data) {
+            // Immediately add to local state for instant UI update
+            setPrivateRooms(prev => prev.some((r: any) => r.id === data.id) ? prev : [...prev, data]);
             setShowCreateRoom(false);
             setNewRoomName("");
             setNewRoomPasscode("");
+        }
+    };
+
+    const handleDeleteRoom = async (roomId: string) => {
+        if (!confirm("Delete this room? All messages in it will remain but the room will be removed.")) return;
+        const { error } = await supabase.from("private_rooms").delete().eq("id", roomId);
+        if (!error) {
+            setPrivateRooms(prev => prev.filter((r: any) => r.id !== roomId));
+            if (activeRoomId === roomId) {
+                setActiveRoomId(null);
+                setActiveChannel("general");
+            }
         }
     };
 
@@ -429,22 +447,6 @@ export default function CommunityPage() {
                 </div>
 
                 <div style={{ padding: "20px", flex: 1, overflowY: "auto" }}>
-                    {/* BUILD SPRINT BANNER */}
-                    <div style={{
-                        background: "#0a0a0a", borderLeft: "3px solid #FF3B30", padding: "16px",
-                        marginBottom: "24px", position: "relative"
-                    }}>
-                        <div style={{ fontFamily: "var(--font-syne)", fontWeight: 900, fontSize: 13, letterSpacing: 3, color: "#fff", marginBottom: 4 }}>BUILD SPRINT</div>
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#FF3B30", marginBottom: 8 }}>{getNextFridayAndSunday()}</div>
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#555", marginBottom: 12 }}>Thesidejob HQ, Vadodara</div>
-                        <button style={{
-                            fontFamily: "var(--font-mono)", fontSize: 11, border: "1px solid #FF3B30", color: "#FF3B30",
-                            background: "transparent", padding: "8px 16px", cursor: "pointer"
-                        }}
-                            onClick={() => alert("RSVP functionality coming soon! 🔴")}
-                        >RSVP</button>
-                    </div>
-
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 3, color: "#333", textTransform: "uppercase", marginBottom: 12 }}>CHANNELS</div>
 
                     {SECTIONS.map((sec) => (
@@ -487,7 +489,16 @@ export default function CommunityPage() {
                             onMouseLeave={(e) => { if (activeRoomId !== room.id) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#555"; } }}
                         >
                             <span style={{ fontSize: 14 }}>🔒</span>
-                            {room.name}
+                            <span style={{ flex: 1 }}>{room.name}</span>
+                            {(isAdmin(user?.email) || room.created_by === profile?.username) && (
+                                <span
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room.id); }}
+                                    style={{ fontSize: 14, color: "#333", cursor: "pointer", padding: "0 4px", lineHeight: 1, transition: "color 0.2s" }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#FF3B30")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
+                                    title="Delete room"
+                                >×</span>
+                            )}
                         </div>
                     ))}
 

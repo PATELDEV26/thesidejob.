@@ -31,6 +31,14 @@ export default function IdeasPage() {
             setUsernameError("Please enter a username.");
             return;
         }
+        if (/\s/.test(username)) {
+            setUsernameError("Username cannot contain spaces.");
+            return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setUsernameError("Only letters, numbers, and underscores allowed.");
+            return;
+        }
         setIsSettingUsername(true);
         setUsernameError("");
 

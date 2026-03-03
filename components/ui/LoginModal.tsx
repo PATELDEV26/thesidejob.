@@ -43,6 +43,14 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
             setError("Please enter a username.");
             return;
         }
+        if (/\s/.test(username)) {
+            setError("Username cannot contain spaces.");
+            return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setError("Only letters, numbers, and underscores allowed.");
+            return;
+        }
         setIsSubmitting(true);
         setError("");
 
