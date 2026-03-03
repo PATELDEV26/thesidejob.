@@ -36,4 +36,4 @@ Push to GitHub and connect to Vercel for automatic deployment.
 
 ## Built by
 
-Dhariya Patel, Dev Patel, Aditya Gupta, Harshit Patel, Vansh Kaushal — Co-Founders, Parul University, Vadodara.
+Dhariya Patel, Dev Patel, Aditya Gupta, Harshit Patel, Vansh Kaushal — Co-Founders, Vadodara.
