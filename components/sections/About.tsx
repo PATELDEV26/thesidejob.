@@ -226,7 +226,7 @@ export default function About() {
                             }}
                         >
                             Born from late-night hackathons and shared dreams, five
-                            co-founders from Parul University built a space where side
+                            co-founders built a space where side
                             projects don&apos;t just survive — they become real companies. No
                             gatekeepers. No waiting. Just builders building.
                         </p>
