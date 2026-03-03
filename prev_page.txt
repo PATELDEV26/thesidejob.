@@ -1,0 +1,82 @@
+﻿commit efd4e32fe3187f7d65361d2cc929a572db193c2f
+Author: PATELDEV26 <pateldev2317@gmail.com>
+Date:   Sat Feb 28 00:03:10 2026 +0530
+
+    Deploy site under maintenance page
+
+diff --git a/app/page.tsx b/app/page.tsx
+index ced82368..650dd33c 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,29 +1,15 @@
+-import Hero from "@/components/sections/Hero";
+-import Marquee from "@/components/ui/Marquee";
+-import About from "@/components/sections/About";
+-import Services from "@/components/sections/Services";
+-import OurWork from "@/components/sections/OurWork";
+-import Stats from "@/components/sections/Stats";
+-import JoinUs from "@/components/sections/JoinUs";
+-import Footer from "@/components/layout/Footer";
+-import FloatingCTA from "@/components/ui/FloatingCTA";
+-import SectionIndicator from "@/components/ui/SectionIndicator";
+-
+ export default function Home() {
+     return (
+-        <div className="page-wrapper" style={{ overflowX: "hidden" }}>
+-            <main>
+-                <Hero />
+-                <Marquee />
+-                <About />
+-                <Services />
+-                <OurWork />
+-                <Stats />
+-                <JoinUs />
+-            </main>
+-            <Footer />
+-            <FloatingCTA />
+-            <SectionIndicator />
++        <div style={{
++            display: "flex",
++            height: "100vh",
++            justifyContent: "center",
++            alignItems: "center",
++            flexDirection: "column",
++            fontFamily: "Arial"
++        }}>
++            <h1>≡ƒÜº Site Under Maintenance</h1>
++            <p>WeΓÇÖll be back shortly. Thank you for your patience.</p>
+         </div>
+     );
+ }
+
+commit 5a30da8b245a636d1de83df8441fc217f363d7c4
+Author: PATELDEV26 <pateldev2317@gmail.com>
+Date:   Thu Feb 26 10:39:45 2026 +0530
+
+    feat: implement ideas and login pages, fix hydration error
+
+diff --git a/app/page.tsx b/app/page.tsx
+index c33c089b..ced82368 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -5,8 +5,6 @@ import Services from "@/components/sections/Services";
+ import OurWork from "@/components/sections/OurWork";
+ import Stats from "@/components/sections/Stats";
+ import JoinUs from "@/components/sections/JoinUs";
+-import DropIdea from "@/components/sections/DropIdea";
+-import AuthSection from "@/components/sections/AuthSection";
+ import Footer from "@/components/layout/Footer";
+ import FloatingCTA from "@/components/ui/FloatingCTA";
+ import SectionIndicator from "@/components/ui/SectionIndicator";
+@@ -21,10 +19,8 @@ export default function Home() {
+                 <Services />
+                 <OurWork />
+                 <Stats />
+-                <DropIdea />
+                 <JoinUs />
+             </main>
+-            <AuthSection />
+             <Footer />
+             <FloatingCTA />
+             <SectionIndicator />
+

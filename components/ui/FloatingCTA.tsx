@@ -29,10 +29,17 @@ export default function FloatingCTA() {
 
     return (
         <>
-            <button
-                ref={btnRef}
+            <a
+                ref={btnRef as any}
+                href="/#join-us"
                 className="magnetic floating-cta-btn"
-                onClick={scrollToJoin}
+                onClick={(e) => {
+                    if (window.location.pathname === '/') {
+                        e.preventDefault()
+                        const el = document.getElementById('join-us')
+                        if (el) el.scrollIntoView({ behavior: 'smooth' })
+                    }
+                }}
                 onMouseEnter={() => setExpanded(true)}
                 onMouseLeave={() => setExpanded(false)}
                 style={{
@@ -55,6 +62,7 @@ export default function FloatingCTA() {
                     padding: expanded ? "0 20px" : 0,
                     transition: "width 0.3s ease, min-width 0.3s ease, padding 0.3s ease",
                     overflow: "visible",
+                    textDecoration: "none",
                 }}
             >
                 {/* Pencil/edit icon */}
@@ -82,7 +90,7 @@ export default function FloatingCTA() {
                 >
                     APPLY NOW
                 </span>
-            </button>
+            </a>
             <style jsx>{`
                 @media (max-width: 768px) {
                     .floating-cta-btn {
