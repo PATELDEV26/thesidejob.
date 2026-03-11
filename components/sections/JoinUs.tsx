@@ -231,7 +231,7 @@ export default function JoinUs() {
                         marginBottom: 16,
                     }}
                 >
-                    Apply to Thesidejob<span style={{ color: "#FF3B30" }}>.</span>
+                    Become a Member<span style={{ color: "#FF3B30" }}>.</span>
                 </h2>
                 <p
                     style={{
@@ -347,7 +347,7 @@ export default function JoinUs() {
                                 marginBottom: 12,
                             }}
                         >
-                            Application Sent.
+                            Request Sent.
                         </div>
                         <div
                             style={{
@@ -596,7 +596,7 @@ export default function JoinUs() {
                                 e.currentTarget.style.background = "#FF3B30";
                             }}
                         >
-                            {loading ? "SENDING..." : "SUBMIT APPLICATION"}
+                            {loading ? "SENDING..." : "JOIN US"}
                         </button>
                     </form>
                 )}
