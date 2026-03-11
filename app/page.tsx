@@ -5,7 +5,6 @@ import Services from "@/components/sections/Services";
 import OurWork from "@/components/sections/OurWork";
 import Stats from "@/components/sections/Stats";
 import JoinUs from "@/components/sections/JoinUs";
-import EventSection from "@/components/sections/EventSection";
 import Footer from "@/components/layout/Footer";
 import FloatingCTA from "@/components/ui/FloatingCTA";
 import SectionIndicator from "@/components/ui/SectionIndicator";
@@ -20,7 +19,6 @@ export default function Home() {
                 <Services />
                 <OurWork />
                 <Stats />
-                <EventSection />
                 <JoinUs />
             </main>
             <Footer />
