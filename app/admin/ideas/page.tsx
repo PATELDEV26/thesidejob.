@@ -60,7 +60,7 @@ interface Idea {
     created_at: string;
 }
 
-function IdeaCard({ idea, isDragging, onApprove, onMessage, onEmail }: { idea: Idea, isDragging?: boolean, onApprove: (i: Idea) => void, onMessage: (i: Idea) => void, onEmail: (i: Idea) => void }) {
+function IdeaCard({ idea, isDragging, onApprove, onEmail }: { idea: Idea, isDragging?: boolean, onApprove: (i: Idea) => void, onEmail: (i: Idea) => void }) {
     const [expanded, setExpanded] = useState(false);
     return (
         <div style={{
