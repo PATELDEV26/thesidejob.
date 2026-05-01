@@ -88,10 +88,6 @@ function IdeaCard({ idea, isDragging, onApprove, onMessage, onEmail }: { idea: I
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <button onClick={(e) => { e.stopPropagation(); onMessage(idea); }} style={{
-                    flex: 1, padding: "8px", background: "#111", border: "1px solid #222",
-                    color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, cursor: "pointer",
-                }}>Message on Charcha</button>
                 <button onClick={(e) => { e.stopPropagation(); onEmail(idea); }} style={{
                     flex: 1, padding: "8px", background: "#111", border: "1px solid #222",
                     color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, cursor: "pointer",
@@ -132,7 +128,7 @@ export default function AdminIdeaBoard() {
             ];
 
             if (!session?.user || !adminEmails.includes(session.user.email || "")) {
-                router.push("/community");
+                router.push("/");
                 return;
             }
 
@@ -166,10 +162,6 @@ export default function AdminIdeaBoard() {
         }
     };
 
-    const handleMessageChannel = (idea: Idea) => {
-        localStorage.setItem("charcha_mention_draft", `Hi @${idea.submitted_by} - regarding your idea "${idea.title}"...`);
-        router.push("/community");
-    };
 
     const handleEmail = (idea: Idea) => {
         window.location.href = `mailto:${idea.email}?subject=Regarding your idea: ${idea.title}`;
@@ -246,7 +238,6 @@ export default function AdminIdeaBoard() {
                                                 <IdeaCard
                                                     idea={idea}
                                                     onApprove={handleApproveAndInvite}
-                                                    onMessage={handleMessageChannel}
                                                     onEmail={handleEmail}
                                                 />
                                             </DraggableCard>

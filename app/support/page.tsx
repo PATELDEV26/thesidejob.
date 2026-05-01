@@ -669,9 +669,6 @@ export default function SupportPage() {
                             </a>
                         </div>
 
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#333", marginTop: 24 }}>
-                            After paying, screenshot and share on Charcha #general — we'll shout you out 🔴
-                        </div>
 
                         <button
                             onClick={() => setShowQR(false)}

@@ -6,14 +6,13 @@ import { ScrollTrigger } from "@/lib/gsap";
 
 const PROJECTS = [
     {
-        monogram: "V",
+        monogram: "AO",
         thumbBg: "#1a1f1a",
-        tags: "NEXT.JS · WEBSOCKETS · RUST",
-        name: "VelocityShare",
-        desc: "A next-generation file sharing and collaboration platform built for teams that move fast. Featuring real-time sync and end-to-end encryption.",
+        tags: "AI ORCHESTRATION · NEXT.JS · SAAS",
+        name: "Agent Orchestrator",
+        desc: "Working for Philippine company Ventaja on their Empyle SaaS project, building a next-generation agent orchestration platform.",
         status: "Live" as const,
-        hideView: false,
-        githubUrl: "https://github.com/thesidejobfive-png/VelociatyShare",
+        hideView: true,
     },
     {
         monogram: "HHI",

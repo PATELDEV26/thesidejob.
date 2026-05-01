@@ -117,49 +117,6 @@ function NavLink({ label, href, activeId, onClick }: { label: string; href: stri
     }
 }
 
-function CharchaLink({ onClick, isActive }: { onClick?: () => void, isActive?: boolean }) {
-    const ref = useRef<HTMLDivElement>(null);
-    const router = useRouter();
-    useMagneticEffect(ref, 0.2);
-
-    const handleCharchaClick = async () => {
-        onClick?.();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            router.push("/community");
-        } else {
-            router.push("/login");
-        }
-    };
-
-    return (
-        <div
-            ref={ref}
-            className={`nav-link magnetic ${isActive ? "active" : ""}`}
-            onClick={handleCharchaClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCharchaClick(); }}
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                cursor: "pointer",
-            }}
-        >
-            <span
-                style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "#FF3B30",
-                    display: "inline-block",
-                }}
-            />
-            CHARCHA
-        </div>
-    );
-}
 
 function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -215,8 +172,6 @@ function Navbar() {
         };
     }, [menuOpen]);
 
-    // Hide navbar on community page
-    if (pathname === "/community") return null;
 
     const closeMenu = () => setMenuOpen(false);
 
@@ -290,7 +245,6 @@ function Navbar() {
                         SUPPORT
                     </Link>
 
-                    <CharchaLink />
 
                     {/* Get in Touch Button */}
                     <a
@@ -476,15 +430,6 @@ function Navbar() {
                         SUPPORT
                     </Link>
 
-                    <div
-                        style={{
-                            opacity: menuOpen ? 1 : 0,
-                            transform: menuOpen ? "translateY(0)" : "translateY(20px)",
-                            transitionDelay: "0.7s",
-                        }}
-                    >
-                        <CharchaLink onClick={closeMenu} />
-                    </div>
 
                     <a
                         href="/#contact"
