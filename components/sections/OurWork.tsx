@@ -4,14 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "@/lib/gsap";
 import { ScrollTrigger } from "@/lib/gsap";
 
-const PROJECTS = [
+interface Project {
+    monogram: string;
+    thumbBg: string;
+    tags: string;
+    name: string;
+    desc: string;
+    status: "Live" | "In Development";
+    hideView: boolean;
+    githubUrl?: string;
+}
+
+const PROJECTS: Project[] = [
     {
         monogram: "AO",
         thumbBg: "#1a1f1a",
         tags: "AI ORCHESTRATION · NEXT.JS · SAAS",
         name: "Agent Orchestrator",
         desc: "Working for Philippine company Ventaja on their Empyle SaaS project, building a next-generation agent orchestration platform.",
-        status: "Live" as const,
+        status: "Live",
         hideView: true,
     },
     {
@@ -20,7 +31,7 @@ const PROJECTS = [
         tags: "NEXT.JS · NODE.JS · WEBRTC",
         name: "Hacker House India",
         desc: "A groundbreaking hybrid space where India's top developers converge to build, collaborate, and push boundaries.",
-        status: "In Development" as const,
+        status: "In Development",
         hideView: true,
     },
 ];
