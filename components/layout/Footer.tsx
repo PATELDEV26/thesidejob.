@@ -206,10 +206,14 @@ function Footer() {
                     {/* Center: Nav links */}
                     <div style={{ display: "flex", gap: 24 }}>
                         {[
-                            { label: "Services", href: "#services" },
-                            { label: "Work", href: "#work" },
-                            { label: "About", href: "#about" },
-                            { label: "Ideas", href: "#drop-idea" },
+                            { label: "Services", href: "/#services" },
+                            { label: "Work", href: "/#work" },
+                            { label: "About", href: "/#about" },
+                            { label: "Products", href: "/products/novasift" },
+                            { label: "Privacy", href: "/privacy" },
+                            { label: "Terms", href: "/terms" },
+                            { label: "Refund", href: "/refund" },
+                            { label: "Ideas", href: "/#drop-idea" },
                             { label: "Support", href: "/support" },
                         ].map(({ label, href }) => (
                             <a
