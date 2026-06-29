@@ -1,5 +1,5 @@
 import Footer from "@/components/layout/Footer";
-import Link from "next/link";
+import NovaSiftCheckout from "@/components/checkout/NovaSiftCheckout";
 import React from "react";
 
 export const metadata = {
@@ -158,7 +158,7 @@ export default function NovaSiftPage() {
                                 <li style={{ marginBottom: "12px", color: "#fff" }}>✓ Custom natural language rules</li>
                                 <li style={{ marginBottom: "12px" }}>✓ Priority support</li>
                             </ul>
-                            <div style={{ textAlign: "center", padding: "16px", background: "#FF3B30", borderRadius: "100px", fontFamily: "var(--font-syne)", fontWeight: "bold", color: "#fff", cursor: "default" }}>Buy in App</div>
+                            <NovaSiftCheckout />
                         </div>
                         {/* Pro Lifetime */}
                         <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: "24px", padding: "40px", display: "flex", flexDirection: "column" }}>
