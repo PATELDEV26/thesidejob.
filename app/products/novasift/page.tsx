@@ -186,6 +186,12 @@ export default function NovaSiftPage() {
                             <strong>Already purchased Pro?</strong><br/>
                             Download the app and activate your license key from Settings → License inside the app.
                         </p>
+                    </div>
+                </section>
+
+                {/* How It Works */}
+                <section style={{ marginBottom: "100px", textAlign: "center" }}>
+                    <h2 style={{ fontFamily: "var(--font-syne)", fontSize: "48px", marginBottom: "48px" }}>How It Works</h2>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "32px" }}>
                         {[
                             { step: "1", title: "Download & Install", desc: "Grab the macOS app from our releases." },
@@ -245,8 +251,6 @@ export default function NovaSiftPage() {
                             </ul>
                             <div style={{ textAlign: "center", padding: "16px", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", fontFamily: "var(--font-syne)", fontWeight: "bold", color: "#fff", cursor: "default" }}>Buy in App</div>
                         </div>
-=======
->>>>>>> df7bb1ec446c16ae440f4f90581bdbd872895004
                     </div>
                 </section>
 
